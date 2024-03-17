@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/citadel-corp/go-project-template/internal/common/request"
-	"github.com/citadel-corp/go-project-template/internal/common/response"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/request"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/response"
 )
 
 type Handler struct {

@@ -15,10 +15,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/citadel-corp/go-project-template/internal/common/db"
-	"github.com/citadel-corp/go-project-template/internal/common/middleware"
-	"github.com/citadel-corp/go-project-template/internal/image"
-	"github.com/citadel-corp/go-project-template/internal/user"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/db"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/middleware"
+	"github.com/citadel-corp/segokuning-social-app/internal/image"
+	"github.com/citadel-corp/segokuning-social-app/internal/user"
 	"github.com/gorilla/mux"
 )
 

@@ -1,4 +1,4 @@
-module github.com/citadel-corp/go-project-template
+module github.com/citadel-corp/segokuning-social-app
 
 go 1.22.0
 

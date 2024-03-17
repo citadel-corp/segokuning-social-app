@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/citadel-corp/go-project-template/internal/common/response"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/response"
 )
 
 func PanicRecoverer(next func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {

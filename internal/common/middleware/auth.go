@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/citadel-corp/go-project-template/internal/common/jwt"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/jwt"
 )
 
 type ContextAuthKey struct{}
