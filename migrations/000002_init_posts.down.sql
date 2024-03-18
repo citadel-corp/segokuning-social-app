@@ -1,0 +1,6 @@
+DROP INDEX IF EXISTS posts_tags;
+
+DROP TABLE IF EXISTS products;
+
+ALTER TABLE products DROP CONSTRAINT fk_user_id;
+ALTER TABLE products ALTER COLUMN created_at SET DEFAULT;

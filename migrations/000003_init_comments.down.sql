@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS comments;
+
+ALTER TABLE comments DROP CONSTRAINT fk_user_id;
+ALTER TABLE comments DROP CONSTRAINT fk_post_id;
+ALTER TABLE comments ALTER COLUMN created_at SET DEFAULT;
