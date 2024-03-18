@@ -1,16 +1,11 @@
 CREATE TABLE IF NOT EXISTS
 users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(15) NOT NULL,
+    id CHAR(16) PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
+	email VARCHAR NOT NULL UNIQUE,
+	phone_number VARCHAR(15) NOT NULL UNIQUE,
     hashed_password BYTEA NOT NULL,
-    created_at TIMESTAMP
+	friend_count INT NOT NULL DEFAULT 0,
+	image_url VARCHAR NULL,
+    created_at TIMESTAMP DEFAULT current_timestamp
 );
-
-CREATE INDEX IF NOT EXISTS users_username
-	ON users USING HASH (username);
-
-ALTER TABLE users DROP CONSTRAINT IF EXISTS users_username_unique;
-ALTER TABLE users ADD CONSTRAINT users_username_unique UNIQUE (username);
-
-ALTER TABLE users ALTER COLUMN created_at SET DEFAULT current_timestamp;

@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS
 posts (
-  id VARCHAR PRIMARY KEY,
-  user_id INT NOT NULL,
+  id CHAR(16) PRIMARY KEY,
+  user_id CHAR(16) NOT NULL,
   content VARCHAR(500) NOT NULL,
   tags TEXT[] NOT NULL,
   created_at TIMESTAMP DEFAULT current_timestamp
