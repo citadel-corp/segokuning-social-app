@@ -18,6 +18,7 @@ import (
 	"github.com/citadel-corp/segokuning-social-app/internal/common/db"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/middleware"
 	"github.com/citadel-corp/segokuning-social-app/internal/image"
+	"github.com/citadel-corp/segokuning-social-app/internal/posts"
 	"github.com/citadel-corp/segokuning-social-app/internal/user"
 	"github.com/gorilla/mux"
 )
@@ -64,6 +65,11 @@ func main() {
 	imageService := image.NewService(sess)
 	imageHandler := image.NewHandler(imageService)
 
+	// initialize posts domain
+	postsRepository := posts.NewRepository(db)
+	postsService := posts.NewService(postsRepository)
+	postsHandler := posts.NewHandler(postsService)
+
 	r := mux.NewRouter()
 	v1 := r.PathPrefix("/v1").Subrouter()
 
@@ -80,6 +86,10 @@ func main() {
 	// image routes
 	ir := v1.PathPrefix("/image").Subrouter()
 	ir.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(imageHandler.UploadToS3))).Methods(http.MethodPost)
+
+	// posts routes
+	pr := v1.PathPrefix("/post").Subrouter()
+	pr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(postsHandler.CreatePost))).Methods(http.MethodPost)
 
 	httpServer := &http.Server{
 		Addr:     ":8000",
