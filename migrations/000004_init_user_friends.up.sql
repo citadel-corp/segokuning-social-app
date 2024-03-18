@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS
 user_friends (
     id SERIAL PRIMARY KEY,
-	user_id INT NOT NULL,
-    friend_id INT NOT NULL,
+		user_id CHAR(16) NOT NULL,
+    friend_id CHAR(16) NOT NULL,
     created_at TIMESTAMP DEFAULT current_timestamp
 );
 
