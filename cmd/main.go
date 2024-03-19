@@ -71,17 +71,19 @@ func main() {
 	postsHandler := posts.NewHandler(postsService)
 
 	r := mux.NewRouter()
-	v1 := r.PathPrefix("/v1").Subrouter()
-
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text")
 		io.WriteString(w, "Service ready")
 	})
 
+	v1 := r.PathPrefix("/v1").Subrouter()
+
 	// user routes
 	ur := v1.PathPrefix("/user").Subrouter()
 	ur.HandleFunc("/register", middleware.PanicRecoverer(userHandler.CreateUser)).Methods(http.MethodPost)
 	ur.HandleFunc("/login", middleware.PanicRecoverer(userHandler.Login)).Methods(http.MethodPost)
+	ur.HandleFunc("/link/email", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkEmail))).Methods(http.MethodPost)
+	ur.HandleFunc("/link/phone", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkPhoneNumber))).Methods(http.MethodPost)
 
 	// image routes
 	ir := v1.PathPrefix("/image").Subrouter()

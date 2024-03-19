@@ -13,6 +13,8 @@ import (
 type Service interface {
 	Create(ctx context.Context, req CreateUserPayload) (*UserRegisterResponse, error)
 	Login(ctx context.Context, req LoginPayload) (*UserLoginResponse, error)
+	LinkEmail(ctx context.Context, req LinkEmailPayload, userID string) error
+	LinkPhoneNumber(ctx context.Context, req LinkPhoneNumberPayload, userID string) error
 }
 
 type userService struct {
@@ -106,4 +108,38 @@ func (s *userService) Login(ctx context.Context, req LoginPayload) (*UserLoginRe
 		Name:        user.Name,
 		AccessToken: accessToken,
 	}, nil
+}
+
+// LinkEmail implements Service.
+func (s *userService) LinkEmail(ctx context.Context, req LinkEmailPayload, userID string) error {
+	err := req.Validate()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrValidationFailed, err)
+	}
+	user, err := s.repository.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user.Email != nil {
+		return ErrUserHasEmail
+	}
+	user.Email = &req.Email
+	return s.repository.Update(ctx, user)
+}
+
+// LinkPhoneNumber implements Service.
+func (s *userService) LinkPhoneNumber(ctx context.Context, req LinkPhoneNumberPayload, userID string) error {
+	err := req.Validate()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrValidationFailed, err)
+	}
+	user, err := s.repository.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if user.PhoneNumber != nil {
+		return ErrUserHasPhoneNumber
+	}
+	user.PhoneNumber = &req.Phone
+	return s.repository.Update(ctx, user)
 }
