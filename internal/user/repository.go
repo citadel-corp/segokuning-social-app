@@ -10,9 +10,11 @@ import (
 )
 
 type Repository interface {
-	Create(ctx context.Context, user *User) error
-	GetByUsername(ctx context.Context, username string) (*User, error)
-	GetByID(ctx context.Context, id uint64) (*User, error)
+	CreateWithEmail(ctx context.Context, user *User) error
+	CreateWithPhoneNumber(ctx context.Context, user *User) error
+	GetByEmail(ctx context.Context, email string) (*User, error)
+	GetByPhoneNumber(ctx context.Context, phoneNumber string) (*User, error)
+	GetByID(ctx context.Context, id string) (*User, error)
 }
 
 type dbRepository struct {
@@ -24,60 +26,87 @@ func NewRepository(db *db.DB) Repository {
 }
 
 // Create implements Repository.
-func (d *dbRepository) Create(ctx context.Context, user *User) error {
+func (d *dbRepository) CreateWithEmail(ctx context.Context, user *User) error {
 	createUserQuery := `
 		INSERT INTO users (
-			username, name, hashed_password
+			id, name, email, hashed_password
 		) VALUES (
-			$1, $2, $3
+			$1, $2, $3, $4
 		)
-		RETURNING id;
 	`
-	row := d.db.DB().QueryRowContext(ctx, createUserQuery, user.Username, user.Name, user.HashedPassword)
-	var id uint64
-	err := row.Scan(&id)
+	_, err := d.db.DB().ExecContext(ctx, createUserQuery, user.ID, user.Name, user.Email, user.HashedPassword)
 	var pgErr *pgconn.PgError
 	if err != nil {
 		if errors.As(err, &pgErr) {
 			switch pgErr.Code {
 			case "23505":
-				return ErrUsernameAlreadyExists
+				return ErrUserEmailAlreadyExists
 			default:
 				return err
 			}
 		}
 		return err
 	}
-	user.ID = id
 	return nil
 }
 
-// GetByUsernameAndHashedPassword implements Repository.
-func (d *dbRepository) GetByUsername(ctx context.Context, username string) (*User, error) {
-	getUserQuery := `
-		SELECT id, username, name, hashed_password FROM users
-		WHERE username = $1;
+// CreateWithPhoneNumber implements Repository.
+func (d *dbRepository) CreateWithPhoneNumber(ctx context.Context, user *User) error {
+	createUserQuery := `
+		INSERT INTO users (
+			id, name, phone_number, hashed_password
+		) VALUES (
+			$1, $2, $3, $4
+		)
 	`
-	row := d.db.DB().QueryRowContext(ctx, getUserQuery, username)
-	u := &User{}
-	err := row.Scan(&u.ID, &u.Username, &u.Name, &u.HashedPassword)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrUserNotFound
-	}
+	_, err := d.db.DB().ExecContext(ctx, createUserQuery, user.ID, user.Name, user.PhoneNumber, user.HashedPassword)
+	var pgErr *pgconn.PgError
 	if err != nil {
-		return nil, err
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case "23505":
+				return ErrUserPhoneNumberAlreadyExists
+			default:
+				return err
+			}
+		}
+		return err
 	}
-	return u, nil
+	return nil
 }
 
-func (d *dbRepository) GetByID(ctx context.Context, id uint64) (*User, error) {
+// GetByEmail implements Repository.
+func (d *dbRepository) GetByEmail(ctx context.Context, email string) (*User, error) {
 	getUserQuery := `
-		SELECT id, username, name, product_sold_total, hashed_password FROM users
+		SELECT id, name, email, phone_number, friend_count, image_url, hashed_password, created_at FROM users
+		WHERE email = $1;
+	`
+	row := d.db.DB().QueryRowContext(ctx, getUserQuery, email)
+	return d.scanUser(row)
+}
+
+// GetByPhoneNumber implements Repository.
+func (d *dbRepository) GetByPhoneNumber(ctx context.Context, phoneNumber string) (*User, error) {
+	getUserQuery := `
+		SELECT id, name, email, phone_number, friend_count, image_url, hashed_password, created_at FROM users
+		WHERE phone_number = $1;
+	`
+	row := d.db.DB().QueryRowContext(ctx, getUserQuery, phoneNumber)
+	return d.scanUser(row)
+}
+
+func (d *dbRepository) GetByID(ctx context.Context, id string) (*User, error) {
+	getUserQuery := `
+		SELECT id, name, email, phone_number, friend_count, image_url, hashed_password, created_at FROM users
 		WHERE id = $1;
 	`
 	row := d.db.DB().QueryRowContext(ctx, getUserQuery, id)
+	return d.scanUser(row)
+}
+
+func (d *dbRepository) scanUser(row *sql.Row) (*User, error) {
 	u := &User{}
-	err := row.Scan(&u.ID, &u.Username, &u.Name, &u.HashedPassword)
+	err := row.Scan(&u.ID, &u.Name, &u.Email, &u.PhoneNumber, &u.FriendCount, &u.ImageURL, &u.HashedPassword, &u.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrUserNotFound
 	}

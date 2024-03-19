@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/citadel-corp/segokuning-social-app/internal/common/id"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/jwt"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/password"
 )
 
 type Service interface {
-	Create(ctx context.Context, req CreateUserPayload) (*UserResponse, error)
-	Login(ctx context.Context, req LoginPayload) (*UserResponse, error)
+	Create(ctx context.Context, req CreateUserPayload) (*UserRegisterResponse, error)
+	Login(ctx context.Context, req LoginPayload) (*UserLoginResponse, error)
 }
 
 type userService struct {
@@ -22,7 +23,7 @@ func NewService(repository Repository) Service {
 	return &userService{repository: repository}
 }
 
-func (s *userService) Create(ctx context.Context, req CreateUserPayload) (*UserResponse, error) {
+func (s *userService) Create(ctx context.Context, req CreateUserPayload) (*UserRegisterResponse, error) {
 	err := req.Validate()
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrValidationFailed, err)
@@ -31,33 +32,51 @@ func (s *userService) Create(ctx context.Context, req CreateUserPayload) (*UserR
 	if err != nil {
 		return nil, err
 	}
-	user := &User{
-		Username:       req.Username,
-		Name:           req.Name,
-		HashedPassword: hashedPassword,
+	var user *User
+	if req.CredentialType == "email" {
+		user = &User{
+			ID:             id.GenerateStringID(16),
+			Name:           req.Name,
+			Email:          &req.CredentialValue,
+			HashedPassword: hashedPassword,
+		}
+		err = s.repository.CreateWithEmail(ctx, user)
+	} else {
+		user = &User{
+			ID:             id.GenerateStringID(16),
+			Name:           req.Name,
+			PhoneNumber:    &req.CredentialValue,
+			HashedPassword: hashedPassword,
+		}
+		err = s.repository.CreateWithPhoneNumber(ctx, user)
 	}
-	err = s.repository.Create(ctx, user)
 	if err != nil {
 		return nil, err
 	}
 	// create access token with signed jwt
-	accessToken, err := jwt.Sign(time.Minute*2, fmt.Sprint(user.ID))
+	accessToken, err := jwt.Sign(time.Hour*8, fmt.Sprint(user.ID))
 	if err != nil {
 		return nil, err
 	}
-	return &UserResponse{
-		Username:    req.Username,
+	return &UserRegisterResponse{
+		Phone:       user.PhoneNumber,
+		Email:       user.Email,
 		Name:        req.Name,
 		AccessToken: accessToken,
 	}, nil
 }
 
-func (s *userService) Login(ctx context.Context, req LoginPayload) (*UserResponse, error) {
+func (s *userService) Login(ctx context.Context, req LoginPayload) (*UserLoginResponse, error) {
 	err := req.Validate()
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrValidationFailed, err)
 	}
-	user, err := s.repository.GetByUsername(ctx, req.Username)
+	var user *User
+	if req.CredentialType == "email" {
+		user, err = s.repository.GetByEmail(ctx, req.CredentialValue)
+	} else {
+		user, err = s.repository.GetByPhoneNumber(ctx, req.CredentialValue)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -69,12 +88,21 @@ func (s *userService) Login(ctx context.Context, req LoginPayload) (*UserRespons
 		return nil, ErrWrongPassword
 	}
 	// create access token with signed jwt
-	accessToken, err := jwt.Sign(time.Minute*2, fmt.Sprint(user.ID))
+	accessToken, err := jwt.Sign(time.Hour*8, fmt.Sprint(user.ID))
 	if err != nil {
 		return nil, err
 	}
-	return &UserResponse{
-		Username:    user.Username,
+	email := ""
+	if user.Email != nil {
+		email = *user.Email
+	}
+	phone := ""
+	if user.PhoneNumber != nil {
+		phone = *user.PhoneNumber
+	}
+	return &UserLoginResponse{
+		Email:       email,
+		Phone:       phone,
 		Name:        user.Name,
 		AccessToken: accessToken,
 	}, nil

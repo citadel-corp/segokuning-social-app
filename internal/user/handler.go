@@ -28,7 +28,7 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userResp, err := h.service.Create(r.Context(), req)
-	if errors.Is(err, ErrUsernameAlreadyExists) {
+	if errors.Is(err, ErrUserPhoneNumberAlreadyExists) || errors.Is(err, ErrUserEmailAlreadyExists) {
 		response.JSON(w, http.StatusConflict, response.ResponseBody{
 			Message: "User already exists",
 			Error:   err.Error(),
