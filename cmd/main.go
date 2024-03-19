@@ -84,6 +84,7 @@ func main() {
 	ur.HandleFunc("/login", middleware.PanicRecoverer(userHandler.Login)).Methods(http.MethodPost)
 	ur.HandleFunc("/link/email", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkEmail))).Methods(http.MethodPost)
 	ur.HandleFunc("/link/phone", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkPhoneNumber))).Methods(http.MethodPost)
+	ur.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userHandler.Update))).Methods(http.MethodPatch)
 
 	// image routes
 	ir := v1.PathPrefix("/image").Subrouter()
