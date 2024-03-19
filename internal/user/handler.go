@@ -2,8 +2,10 @@ package user
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
+	"github.com/citadel-corp/segokuning-social-app/internal/common/middleware"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/request"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/response"
 )
@@ -99,4 +101,118 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Message: "User logged successfully",
 		Data:    userResp,
 	})
+}
+
+func (h *Handler) LinkEmail(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserID(r)
+	if err != nil {
+		response.JSON(w, http.StatusUnauthorized, response.ResponseBody{
+			Message: "Unauthorized",
+			Error:   err.Error(),
+		})
+		return
+	}
+	var req LinkEmailPayload
+
+	err = request.DecodeJSON(w, r, &req)
+	if err != nil {
+		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
+			Message: "Failed to decode JSON",
+			Error:   err.Error(),
+		})
+		return
+	}
+	err = h.service.LinkEmail(r.Context(), req, userID)
+	if errors.Is(err, ErrValidationFailed) {
+		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
+			Message: "Bad request",
+			Error:   err.Error(),
+		})
+		return
+	}
+	if errors.Is(err, ErrUserHasEmail) {
+		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
+			Message: "Bad request",
+			Error:   err.Error(),
+		})
+		return
+	}
+	if errors.Is(err, ErrUserEmailAlreadyExists) {
+		response.JSON(w, http.StatusConflict, response.ResponseBody{
+			Message: "Conflict",
+			Error:   err.Error(),
+		})
+		return
+	}
+	if err != nil {
+		response.JSON(w, http.StatusInternalServerError, response.ResponseBody{
+			Message: "Internal server error",
+			Error:   err.Error(),
+		})
+		return
+	}
+	response.JSON(w, http.StatusOK, response.ResponseBody{
+		Message: "User email linked successfully",
+	})
+}
+
+func (h *Handler) LinkPhoneNumber(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserID(r)
+	if err != nil {
+		response.JSON(w, http.StatusUnauthorized, response.ResponseBody{
+			Message: "Unauthorized",
+			Error:   err.Error(),
+		})
+		return
+	}
+	var req LinkPhoneNumberPayload
+
+	err = request.DecodeJSON(w, r, &req)
+	if err != nil {
+		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
+			Message: "Failed to decode JSON",
+			Error:   err.Error(),
+		})
+		return
+	}
+	err = h.service.LinkPhoneNumber(r.Context(), req, userID)
+	if errors.Is(err, ErrValidationFailed) {
+		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
+			Message: "Bad request",
+			Error:   err.Error(),
+		})
+		return
+	}
+	if errors.Is(err, ErrUserHasPhoneNumber) {
+		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
+			Message: "Bad request",
+			Error:   err.Error(),
+		})
+		return
+	}
+	if errors.Is(err, ErrUserPhoneNumberAlreadyExists) {
+		response.JSON(w, http.StatusConflict, response.ResponseBody{
+			Message: "Conflict",
+			Error:   err.Error(),
+		})
+		return
+	}
+	if err != nil {
+		response.JSON(w, http.StatusInternalServerError, response.ResponseBody{
+			Message: "Internal server error",
+			Error:   err.Error(),
+		})
+		return
+	}
+	response.JSON(w, http.StatusOK, response.ResponseBody{
+		Message: "Successfully linked phone number",
+	})
+}
+
+func getUserID(r *http.Request) (string, error) {
+	if authValue, ok := r.Context().Value(middleware.ContextAuthKey{}).(string); ok {
+		return authValue, nil
+	}
+	slog.Error("cannot parse auth value from context")
+	return "", errors.New("cannot parse auth value from context")
 }

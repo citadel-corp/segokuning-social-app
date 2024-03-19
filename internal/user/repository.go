@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 
 	"github.com/citadel-corp/segokuning-social-app/internal/common/db"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -15,6 +16,7 @@ type Repository interface {
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (*User, error)
 	GetByID(ctx context.Context, id string) (*User, error)
+	Update(ctx context.Context, user *User) error
 }
 
 type dbRepository struct {
@@ -102,6 +104,38 @@ func (d *dbRepository) GetByID(ctx context.Context, id string) (*User, error) {
 	`
 	row := d.db.DB().QueryRowContext(ctx, getUserQuery, id)
 	return d.scanUser(row)
+}
+
+// Update implements Repository.
+func (d *dbRepository) Update(ctx context.Context, user *User) error {
+	updateQuery := `
+		UPDATE users
+		SET name = $1,
+		email = $2,
+		phone_number = $3,
+		friend_count = $4,
+		image_url = $5
+		WHERE id = $6;
+	`
+	_, err := d.db.DB().ExecContext(ctx, updateQuery, user.Name, user.Email, user.PhoneNumber, user.FriendCount, user.ImageURL, user.ID)
+	var pgErr *pgconn.PgError
+	if err != nil {
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case "23505":
+				if strings.Contains(pgErr.ConstraintName, "phone_number") {
+					return ErrUserPhoneNumberAlreadyExists
+				}
+				if strings.Contains(pgErr.ConstraintName, "email") {
+					return ErrUserEmailAlreadyExists
+				}
+			default:
+				return err
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func (d *dbRepository) scanUser(row *sql.Row) (*User, error) {
