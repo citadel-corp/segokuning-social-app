@@ -1,4 +1,4 @@
-package posts
+package userfriends
 
 import (
 	"errors"
@@ -13,4 +13,8 @@ var (
 	ErrorBadRequest    = Response{Code: http.StatusBadRequest, Message: "Bad Request"}
 	ErrorNoRecords     = Response{Code: http.StatusOK, Message: "No records found"}
 	ErrorNotFound      = Response{Code: http.StatusNotFound, Message: "No records found"}
+
+	ErrFriendAlreadyExists = Response{Code: http.StatusBadRequest, Message: "Friend had already been added"}
+	ErrFriendNotExists     = Response{Code: http.StatusNotFound, Message: "Friend is not found"}
+	ErrCannotAddSelf       = Response{Code: http.StatusBadRequest, Message: "Cannot add self as friend"}
 )

@@ -20,6 +20,7 @@ import (
 	"github.com/citadel-corp/segokuning-social-app/internal/image"
 	"github.com/citadel-corp/segokuning-social-app/internal/posts"
 	"github.com/citadel-corp/segokuning-social-app/internal/user"
+	userfriends "github.com/citadel-corp/segokuning-social-app/internal/user_friends"
 	"github.com/gorilla/mux"
 )
 
@@ -53,6 +54,11 @@ func main() {
 	userService := user.NewService(userRepository)
 	userHandler := user.NewHandler(userService)
 
+	// initialize user friends domain
+	userFriendsRepository := userfriends.NewRepository(db)
+	userFriendsService := userfriends.NewService(userFriendsRepository)
+	userFriendsHandler := userfriends.NewHandler(userFriendsService)
+
 	// initialize image domain
 	sess, err := session.NewSession(&aws.Config{
 		Region:      aws.String("ap-southeast-1"),
@@ -84,6 +90,10 @@ func main() {
 	ur.HandleFunc("/login", middleware.PanicRecoverer(userHandler.Login)).Methods(http.MethodPost)
 	ur.HandleFunc("/link/email", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkEmail))).Methods(http.MethodPost)
 	ur.HandleFunc("/link/phone", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkPhoneNumber))).Methods(http.MethodPost)
+
+	// user friends routes
+	ufr := v1.PathPrefix("/friend").Subrouter()
+	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userFriendsHandler.CreateUserFriends))).Methods(http.MethodPost)
 
 	// image routes
 	ir := v1.PathPrefix("/image").Subrouter()
