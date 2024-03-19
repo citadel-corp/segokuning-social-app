@@ -1,8 +1,14 @@
 package user
 
+import "time"
+
 type User struct {
-	ID             uint64
-	Username       string
+	ID             string
 	Name           string
+	Email          *string
+	PhoneNumber    *string
+	FriendCount    int
+	ImageURL       *string
 	HashedPassword string
+	CreatedAt      time.Time
 }
