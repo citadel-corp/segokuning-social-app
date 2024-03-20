@@ -12,4 +12,5 @@ type Response struct {
 
 var (
 	SuccessCreateResponse = Response{Code: 200, Message: "Friend added successfully"}
+	SuccessDeleteResponse = Response{Code: 200, Message: "Friend deleted successfully"}
 )

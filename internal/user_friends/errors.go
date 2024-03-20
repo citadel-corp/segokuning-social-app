@@ -17,4 +17,6 @@ var (
 	ErrFriendAlreadyExists = Response{Code: http.StatusBadRequest, Message: "Friend had already been added"}
 	ErrFriendNotExists     = Response{Code: http.StatusNotFound, Message: "Friend is not found"}
 	ErrCannotAddSelf       = Response{Code: http.StatusBadRequest, Message: "Cannot add self as friend"}
+	ErrCannotDeleteSelf    = Response{Code: http.StatusBadRequest, Message: "Cannot delete self as friend"}
+	ErrNotFriend           = Response{Code: http.StatusBadRequest, Message: "Cannot delete non friend"}
 )
