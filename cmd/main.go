@@ -56,7 +56,7 @@ func main() {
 
 	// initialize user friends domain
 	userFriendsRepository := userfriends.NewRepository(db)
-	userFriendsService := userfriends.NewService(userFriendsRepository)
+	userFriendsService := userfriends.NewService(userFriendsRepository, userRepository)
 	userFriendsHandler := userfriends.NewHandler(userFriendsService)
 
 	// initialize image domain
@@ -95,6 +95,7 @@ func main() {
 	// user friends routes
 	ufr := v1.PathPrefix("/friend").Subrouter()
 	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userFriendsHandler.CreateUserFriends))).Methods(http.MethodPost)
+	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userFriendsHandler.DeleteUserFriends))).Methods(http.MethodDelete)
 
 	// image routes
 	ir := v1.PathPrefix("/image").Subrouter()

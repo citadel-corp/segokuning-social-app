@@ -13,3 +13,15 @@ func (p CreateUserFriendPayload) Validate() error {
 		validation.Field(&p.UserID, validation.Required),
 	)
 }
+
+type DeleteUserFriendPayload struct {
+	LoggedUserID string
+	UserID       string `json:"userId"`
+}
+
+func (p DeleteUserFriendPayload) Validate() error {
+	return validation.ValidateStruct(&p,
+		validation.Field(&p.LoggedUserID, validation.Required.Error(ErrorUnauthorized.Message)),
+		validation.Field(&p.UserID, validation.Required),
+	)
+}
