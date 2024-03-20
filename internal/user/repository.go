@@ -157,7 +157,7 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 	)
 
 	if filter.OnlyFriend && filter.UserID != "" {
-		whereStatement = fmt.Sprintf("%s WHERE user_friends.user_id = $%d", whereStatement, columnCtr)
+		whereStatement = fmt.Sprintf("%s WHERE user_friends.friend_id = $%d", whereStatement, columnCtr)
 		joinStatement = fmt.Sprintf("%s JOIN user_friends ON users.id = user_friends.user_id", joinStatement)
 		args = append(args, filter.UserID)
 		columnCtr++

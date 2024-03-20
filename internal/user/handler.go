@@ -250,6 +250,15 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListUser(w http.ResponseWriter, r *http.Request) {
+	userID, err := getUserID(r)
+	if err != nil {
+		response.JSON(w, http.StatusUnauthorized, response.ResponseBody{
+			Message: "Unauthorized",
+			Error:   err.Error(),
+		})
+		return
+	}
+
 	var req ListUserPayload
 
 	newSchema := schema.NewDecoder()
@@ -260,6 +269,8 @@ func (h *Handler) ListUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.UserID = userID
+
 	usersResp, pagination, err := h.service.List(r.Context(), req)
 	if err != nil {
 		response.JSON(w, http.StatusInternalServerError, response.ResponseBody{
@@ -268,7 +279,7 @@ func (h *Handler) ListUser(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	response.JSON(w, http.StatusCreated, response.ResponseBody{
+	response.JSON(w, http.StatusOK, response.ResponseBody{
 		Message: "Users fetched successfully",
 		Data:    usersResp,
 		Meta:    pagination,
