@@ -21,6 +21,7 @@ func NewRepository(db *db.DB) Repository {
 
 func (d *dbRepository) AddFriend(ctx context.Context, userFriend *UserFriends) error {
 	err := d.db.StartTx(ctx, func(tx *sql.Tx) error {
+		// add user's friend
 		_, err := d.db.DB().ExecContext(ctx, `
 				INSERT INTO user_friends (
 					user_id, friend_id
@@ -32,6 +33,7 @@ func (d *dbRepository) AddFriend(ctx context.Context, userFriend *UserFriends) e
 			return err
 		}
 
+		// add user as friend's friend
 		_, err = d.db.DB().ExecContext(ctx, `
 				INSERT INTO user_friends (
 					user_id, friend_id
@@ -39,6 +41,17 @@ func (d *dbRepository) AddFriend(ctx context.Context, userFriend *UserFriends) e
 					$1, $2
 				)
 			`, userFriend.FriendID, userFriend.UserID)
+		if err != nil {
+			return err
+		}
+
+		// add friendCount to user and friend
+		_, err = d.db.DB().ExecContext(ctx, `
+				UPDATE users
+				SET friend_count = friend_count + 1
+				WHERE id = $1
+				OR id = $2
+			`, userFriend.UserID, userFriend.FriendID)
 		if err != nil {
 			return err
 		}
