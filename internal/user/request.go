@@ -64,3 +64,15 @@ func (p LinkPhoneNumberPayload) Validate() error {
 		validation.Field(&p.Phone, validation.Required, validation.Length(7, 13), phoneNumberValidationRule),
 	)
 }
+
+type UpdateUserPayload struct {
+	ImageURL string `json:"imageUrl"`
+	Name     string `json:"name"`
+}
+
+func (p UpdateUserPayload) Validate() error {
+	return validation.ValidateStruct(&p,
+		validation.Field(&p.ImageURL, validation.Required, is.URL),
+		validation.Field(&p.Name, validation.Required, validation.Length(5, 50)),
+	)
+}

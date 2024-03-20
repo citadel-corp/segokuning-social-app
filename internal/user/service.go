@@ -15,6 +15,7 @@ type Service interface {
 	Login(ctx context.Context, req LoginPayload) (*UserLoginResponse, error)
 	LinkEmail(ctx context.Context, req LinkEmailPayload, userID string) error
 	LinkPhoneNumber(ctx context.Context, req LinkPhoneNumberPayload, userID string) error
+	Update(ctx context.Context, req UpdateUserPayload, userID string) error
 }
 
 type userService struct {
@@ -141,5 +142,20 @@ func (s *userService) LinkPhoneNumber(ctx context.Context, req LinkPhoneNumberPa
 		return ErrUserHasPhoneNumber
 	}
 	user.PhoneNumber = &req.Phone
+	return s.repository.Update(ctx, user)
+}
+
+// Update implements Service.
+func (s *userService) Update(ctx context.Context, req UpdateUserPayload, userID string) error {
+	err := req.Validate()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrValidationFailed, err)
+	}
+	user, err := s.repository.GetByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	user.ImageURL = &req.ImageURL
+	user.Name = req.Name
 	return s.repository.Update(ctx, user)
 }
