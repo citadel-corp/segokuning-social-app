@@ -2,6 +2,7 @@ package userfriends
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -66,21 +67,23 @@ func (s *userFriendsService) Delete(ctx context.Context, req DeleteUserFriendPay
 	}
 
 	// get user id (friend id)
-	friend, err := s.userRepository.GetByID(ctx, req.UserID)
-	if friend == nil {
-		return ErrFriendNotExists
-	}
+	_, err := s.userRepository.GetByID(ctx, req.UserID)
 	if err != nil {
+		if err == user.ErrUserNotFound {
+			return ErrFriendNotExists
+		}
+
 		slog.Error(fmt.Sprintf("[%s] error while getting friend detail: %s", serviceName, err.Error()))
 		return ErrorInternal
 	}
 
 	// check friendship
-	friendship, err := s.repository.GetByFriendID(ctx, req.LoggedUserID, req.UserID)
-	if friendship == nil {
-		return ErrNotFriend
-	}
+	_, err = s.repository.GetByFriendID(ctx, req.LoggedUserID, req.UserID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFriend
+		}
+
 		slog.Error(fmt.Sprintf("[%s] error while checking friendship: %s", serviceName, err.Error()))
 		return ErrorInternal
 	}
