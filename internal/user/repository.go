@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/citadel-corp/segokuning-social-app/internal/common/db"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/response"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -17,6 +19,7 @@ type Repository interface {
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (*User, error)
 	GetByID(ctx context.Context, id string) (*User, error)
 	Update(ctx context.Context, user *User) error
+	List(ctx context.Context, filter ListUserPayload) ([]UserListResponse, *response.Pagination, error)
 }
 
 type dbRepository struct {
@@ -136,6 +139,138 @@ func (d *dbRepository) Update(ctx context.Context, user *User) error {
 		return err
 	}
 	return nil
+}
+
+func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]UserListResponse, *response.Pagination, error) {
+	var users []UserListResponse
+	var pagination *response.Pagination
+
+	var (
+		selectStatement     string
+		whereStatement      string
+		query               string
+		joinStatement       string
+		orderStatement      string
+		paginationStatement string
+		args                []interface{}
+		columnCtr           int = 1
+	)
+
+	if filter.OnlyFriend && filter.UserID != "" {
+		whereStatement = fmt.Sprintf("%s WHERE user_friends.user_id = $%d", whereStatement, columnCtr)
+		joinStatement = fmt.Sprintf("%s JOIN user_friends ON users.id = user_friends.user_id", joinStatement)
+		args = append(args, filter.UserID)
+		columnCtr++
+	}
+
+	if filter.Search != "" {
+		whereStatement = insertWhereStatement(len(args) > 0, whereStatement)
+		whereStatement = fmt.Sprintf("%s lower(users.name) LIKE CONCAT('%%',$%d::text,'%%')", whereStatement, columnCtr)
+		args = append(args, strings.ToLower(filter.Search))
+		columnCtr++
+	}
+
+	var orderBy string
+	switch filter.OrderBy {
+	case "asc":
+		orderBy = "asc"
+	case "desc":
+		orderBy = "desc"
+	default:
+		orderBy = "desc"
+	}
+
+	switch filter.SortBy {
+	case userSortBy(SortByFriendCount):
+		orderStatement = fmt.Sprintf("%s ORDER BY users.friend_count %s", orderStatement, orderBy)
+	case userSortBy(SortByCreatedAt):
+		orderStatement = fmt.Sprintf("%s ORDER BY users.created_at %s", orderStatement, orderBy)
+	default:
+		orderStatement = fmt.Sprintf("%s ORDER BY users.created_at %s", orderStatement, orderBy)
+	}
+
+	var rows *sql.Rows
+	var err error
+	pagination = &response.Pagination{
+		Limit:  filter.Limit,
+		Offset: filter.Offset,
+	}
+
+	if filter.Limit != 0 {
+		selectStatement = fmt.Sprintf(`
+			SELECT COUNT(*) OVER() AS total_count, users.id as productId, users.name as name, users.image_url as imageUrl, 
+				users.friend_count as friendCount, users.created_at as createdAt 
+			FROM users 
+		%s`, selectStatement)
+
+		paginationStatement = fmt.Sprintf("%s LIMIT $%d", paginationStatement, columnCtr)
+		args = append(args, filter.Limit)
+		columnCtr++
+
+		paginationStatement = fmt.Sprintf("%s OFFSET $%d", paginationStatement, columnCtr)
+		args = append(args, filter.Offset)
+
+		query = fmt.Sprintf("%s %s %s %s %s;", selectStatement, joinStatement, whereStatement, orderStatement, paginationStatement)
+
+		// sanitize query
+		query = strings.Replace(query, "\t", "", -1)
+		query = strings.Replace(query, "\n", "", -1)
+
+		rows, err = d.db.DB().QueryContext(ctx, query, args...)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for rows.Next() {
+			var u UserListResponse
+			if err := rows.Scan(&pagination.Total, &u.ID, &u.Name, &u.ImageURL, &u.FriendCount, &u.CreatedAt); err != nil {
+				return users, nil, err
+			}
+			users = append(users, u)
+		}
+	} else {
+		selectStatement = fmt.Sprintf(`
+			SELECT users.id as productId, users.name as name, users.image_url as imageUrl, 
+				users.friend_count as friendCount, users.created_at as createdAt 
+			FROM users
+		%s`, selectStatement)
+
+		query = fmt.Sprintf("%s %s %s %s %s;", selectStatement, joinStatement, whereStatement, orderStatement, paginationStatement)
+
+		// sanitize query
+		query = strings.Replace(query, "\t", "", -1)
+		query = strings.Replace(query, "\n", "", -1)
+
+		rows, err = d.db.DB().QueryContext(ctx, query, args...)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for rows.Next() {
+			var u UserListResponse
+			if err := rows.Scan(&u.ID, &u.Name, &u.ImageURL, &u.FriendCount, &u.CreatedAt); err != nil {
+				return users, nil, err
+			}
+			users = append(users, u)
+		}
+
+		pagination.Total = len(users)
+	}
+
+	defer rows.Close()
+
+	if err = rows.Err(); err != nil {
+		return users, nil, err
+	}
+
+	return users, pagination, nil
+}
+
+func insertWhereStatement(condition bool, statement string) string {
+	if condition {
+		return fmt.Sprintf(`%v AND`, statement)
+	}
+	return fmt.Sprintf(`%v WHERE`, statement)
 }
 
 func (d *dbRepository) scanUser(row *sql.Row) (*User, error) {

@@ -96,6 +96,7 @@ func main() {
 	ufr := v1.PathPrefix("/friend").Subrouter()
 	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userFriendsHandler.CreateUserFriends))).Methods(http.MethodPost)
 	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userFriendsHandler.DeleteUserFriends))).Methods(http.MethodDelete)
+	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userHandler.ListUser))).Methods(http.MethodGet)
 
 	// image routes
 	ir := v1.PathPrefix("/image").Subrouter()

@@ -8,6 +8,7 @@ import (
 	"github.com/citadel-corp/segokuning-social-app/internal/common/middleware"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/request"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/response"
+	"github.com/gorilla/schema"
 )
 
 type Handler struct {
@@ -245,6 +246,32 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	response.JSON(w, http.StatusOK, response.ResponseBody{
 		Message: "Successfully update user",
+	})
+}
+
+func (h *Handler) ListUser(w http.ResponseWriter, r *http.Request) {
+	var req ListUserPayload
+
+	newSchema := schema.NewDecoder()
+	newSchema.IgnoreUnknownKeys(true)
+	if err := newSchema.Decode(&req, r.URL.Query()); err != nil {
+		slog.Error(err.Error())
+		response.JSON(w, http.StatusBadRequest, response.ResponseBody{})
+		return
+	}
+
+	usersResp, pagination, err := h.service.List(r.Context(), req)
+	if err != nil {
+		response.JSON(w, http.StatusInternalServerError, response.ResponseBody{
+			Message: "Internal server error",
+			Error:   err.Error(),
+		})
+		return
+	}
+	response.JSON(w, http.StatusCreated, response.ResponseBody{
+		Message: "Users fetched successfully",
+		Data:    usersResp,
+		Meta:    pagination,
 	})
 }
 

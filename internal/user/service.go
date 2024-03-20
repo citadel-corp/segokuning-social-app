@@ -8,6 +8,7 @@ import (
 	"github.com/citadel-corp/segokuning-social-app/internal/common/id"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/jwt"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/password"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/response"
 )
 
 type Service interface {
@@ -16,6 +17,7 @@ type Service interface {
 	LinkEmail(ctx context.Context, req LinkEmailPayload, userID string) error
 	LinkPhoneNumber(ctx context.Context, req LinkPhoneNumberPayload, userID string) error
 	Update(ctx context.Context, req UpdateUserPayload, userID string) error
+	List(ctx context.Context, req ListUserPayload) ([]UserListResponse, *response.Pagination, error)
 }
 
 type userService struct {
@@ -158,4 +160,8 @@ func (s *userService) Update(ctx context.Context, req UpdateUserPayload, userID 
 	user.ImageURL = &req.ImageURL
 	user.Name = req.Name
 	return s.repository.Update(ctx, user)
+}
+
+func (s *userService) List(ctx context.Context, req ListUserPayload) ([]UserListResponse, *response.Pagination, error) {
+	return s.repository.List(ctx, req)
 }
