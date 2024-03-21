@@ -117,7 +117,7 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 		ORDER BY p.created_at desc
 	`
 
-	query = fmt.Sprintf("%s %s %s %s %s;", withStatement, selectStatement)
+	query = fmt.Sprintf("%s %s;", withStatement, selectStatement)
 
 	// sanitize query
 	query = strings.Replace(query, "\t", "", -1)
