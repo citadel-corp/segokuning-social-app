@@ -3,9 +3,17 @@ package posts
 import "time"
 
 type Posts struct {
-	ID        string    `json:"-"`
-	UserID    string    `json:"user_ID"`
-	Content   string    `json:"content"`
-	Tags      []string  `json:"tags"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        string
+	UserID    string
+	Content   string
+	Tags      []string
+	CreatedAt time.Time
+}
+
+type Comment struct {
+	ID        uint64
+	UserID    string
+	PostID    string
+	Content   string
+	CreatedAt time.Time
 }

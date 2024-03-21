@@ -11,5 +11,6 @@ type Response struct {
 }
 
 var (
-	SuccessCreateResponse = Response{Code: 200, Message: "Post created successfully"}
+	SuccessCreateResponse        = Response{Code: 200, Message: "Post created successfully"}
+	SuccessCreateCommentResponse = Response{Code: 200, Message: "Comment created successfully"}
 )
