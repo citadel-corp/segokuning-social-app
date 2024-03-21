@@ -189,15 +189,15 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 		orderStatement = fmt.Sprintf("%s ORDER BY users.created_at %s", orderStatement, orderBy)
 	}
 
+	if filter.Limit == 0 {
+		filter.Limit = 5
+	}
+
 	var rows *sql.Rows
 	var err error
 	pagination = &response.Pagination{
 		Limit:  filter.Limit,
 		Offset: filter.Offset,
-	}
-
-	if filter.Limit == 0 {
-		filter.Limit = 5
 	}
 
 	selectStatement = fmt.Sprintf(`

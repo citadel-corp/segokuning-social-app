@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/citadel-corp/segokuning-social-app/internal/comments"
@@ -53,15 +52,19 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 	var pagination *response.Pagination
 
 	var (
-		selectStatement     string
-		whereStatement      string
-		query               string
-		joinStatement       string
-		orderStatement      string
-		paginationStatement string
-		args                []interface{}
-		columnCtr           int = 1
+		withStatement   string
+		selectStatement string
+		whereStatement  string
+		query           string
+		joinStatement   string
+		orderStatement  string
+		args            []interface{}
+		columnCtr       int = 1
 	)
+
+	if filter.Limit == 0 {
+		filter.Limit = 5
+	}
 
 	var rows *sql.Rows
 	var err error
@@ -70,44 +73,57 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 		Offset: filter.Offset,
 	}
 
-	joinStatement = fmt.Sprintf("%s LEFT JOIN user_friends uf ON uf.user_id = $%d AND p.user_id = uf.friend_id", joinStatement, columnCtr)
+	withStatement = fmt.Sprintf(`
+		WITH p AS (
+			SELECT COUNT(*) OVER() AS total_count, posts.* 
+			FROM posts 
+			LEFT JOIN user_friends uf ON uf.user_id = $%d 
+			AND posts.user_id = uf.friend_id 
+			WHERE (posts.user_id = $%d OR posts.user_id = uf.friend_id) 
+	`, columnCtr, columnCtr+1)
+	args = append(args, filter.UserID)
+	columnCtr++
 	args = append(args, filter.UserID)
 	columnCtr++
 
-	whereStatement = fmt.Sprintf("%s WHERE (p.user_id = $%d OR p.user_id = uf.friend_id)", whereStatement, columnCtr)
-	args = append(args, filter.UserID)
-	columnCtr++
-
-	if filter.Limit == 0 {
-		filter.Limit = 5
+	if filter.Search != "" {
+		withStatement = fmt.Sprintf("%s AND lower(posts.content) LIKE CONCAT('%%',$%d::text,'%%')", withStatement, columnCtr)
+		args = append(args, strings.ToLower(filter.Search))
+		columnCtr++
 	}
 
-	selectStatement = fmt.Sprintf(`
-		SELECT COUNT(*) OVER() AS total_count, p.id as postId, p."content" as postInHtml, p.tags, p.created_at as product_created_at,
+	if len(filter.SearchTags) > 0 {
+		for i := range filter.SearchTags {
+			withStatement = fmt.Sprintf("%s AND $%d = ANY(posts.tags)", withStatement, columnCtr)
+			args = append(args, filter.SearchTags[i])
+			columnCtr++
+		}
+	}
+
+	withStatement = fmt.Sprintf("%s LIMIT $%d OFFSET $%d) ", withStatement, columnCtr, columnCtr+1)
+
+	args = append(args, filter.Limit)
+	columnCtr++
+	args = append(args, filter.Offset)
+	columnCtr++
+
+	selectStatement = `
+		SELECT p.total_count, p.id as postId, p."content" as postInHtml, p.tags, p.created_at as product_created_at,
 			c.id, c."content" as "comment", c.created_at as comment_created_at,
 			pu.id as userId, pu.name as name, pu.image_url as imageUrl, pu.friend_count as friendCount,
 			pu.created_at as user_created_at,
 			cu.id as userId, cu.name as name, cu.image_url as imageUrl, cu.friend_count as friendCount 
-		FROM posts p 
+		FROM p 
 		JOIN users pu ON pu.id = p.user_id 
 		LEFT JOIN "comments" c ON p.id = c.post_id 
 		LEFT JOIN users cu ON cu.id = c.user_id
-	%s`, selectStatement)
+	`
 
-	paginationStatement = fmt.Sprintf("%s LIMIT $%d", paginationStatement, columnCtr)
-	args = append(args, filter.Limit)
-	columnCtr++
-
-	paginationStatement = fmt.Sprintf("%s OFFSET $%d", paginationStatement, columnCtr)
-	args = append(args, filter.Offset)
-
-	query = fmt.Sprintf("%s %s %s %s %s;", selectStatement, joinStatement, whereStatement, orderStatement, paginationStatement)
+	query = fmt.Sprintf("%s %s %s %s %s;", withStatement, selectStatement, joinStatement, whereStatement, orderStatement)
 
 	// sanitize query
 	query = strings.Replace(query, "\t", "", -1)
 	query = strings.Replace(query, "\n", "", -1)
-
-	slog.Info("query ", query)
 
 	rows, err = d.db.DB().QueryContext(ctx, query, args...)
 	if err != nil {
@@ -149,8 +165,6 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 		}
 	}
 
-	pagination.Total = len(resp)
-
 	defer rows.Close()
 
 	if err = rows.Err(); err != nil {
@@ -158,11 +172,4 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 	}
 
 	return resp, pagination, nil
-}
-
-func insertWhereStatement(condition bool, statement string) string {
-	if condition {
-		return fmt.Sprintf(`%v AND`, statement)
-	}
-	return fmt.Sprintf(`%v WHERE`, statement)
 }
