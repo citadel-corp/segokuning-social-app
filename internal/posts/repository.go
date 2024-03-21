@@ -155,10 +155,6 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 
 	query = fmt.Sprintf("%s %s;", withStatement, selectStatement)
 
-	// sanitize query
-	query = strings.Replace(query, "\t", "", -1)
-	query = strings.Replace(query, "\n", "", -1)
-
 	rows, err = d.db.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, nil, err
