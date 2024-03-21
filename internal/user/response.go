@@ -23,3 +23,18 @@ type UserListResponse struct {
 	FriendCount int       `json:"friendCount"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
+
+type UserGetResponse struct {
+	ID          string    `json:"userId"`
+	Name        string    `json:"name"`
+	ImageURL    *string   `json:"imageUrl"`
+	FriendCount int       `json:"friendCount"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+type UserCommentResponse struct {
+	ID          *string `json:"userId"`
+	Name        *string `json:"name"`
+	ImageURL    *string `json:"imageUrl"`
+	FriendCount *int    `json:"friendCount"`
+}

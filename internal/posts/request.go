@@ -24,3 +24,11 @@ func (p CreatePostPayload) Validate() error {
 		validation.Field(&p.Tags, validation.Required),
 	)
 }
+
+type ListPostPayload struct {
+	UserID     string
+	Search     string   `schema:"search" binding:"omitempty"`
+	SearchTags []string `schema:"searchTag" binding:"omitempty"`
+	Limit      int      `schema:"limit" binding:"omitempty"`
+	Offset     int      `schema:"offset" binding:"omitempty"`
+}
