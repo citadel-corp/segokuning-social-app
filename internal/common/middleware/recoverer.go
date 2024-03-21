@@ -9,8 +9,8 @@ import (
 	"github.com/citadel-corp/segokuning-social-app/internal/common/response"
 )
 
-func PanicRecoverer(next func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func PanicRecoverer(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			r := recover()
 			if r != nil {
@@ -22,6 +22,6 @@ func PanicRecoverer(next func(w http.ResponseWriter, r *http.Request)) func(w ht
 				})
 			}
 		}()
-		next(w, r)
-	}
+		next.ServeHTTP(w, r)
+	})
 }

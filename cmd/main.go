@@ -82,6 +82,8 @@ func main() {
 
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
+	r.Use(middleware.PanicRecoverer)
+
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text")
 		io.WriteString(w, "Service ready")
@@ -91,28 +93,28 @@ func main() {
 
 	// user routes
 	ur := v1.PathPrefix("/user").Subrouter()
-	ur.HandleFunc("/register", middleware.PanicRecoverer(userHandler.CreateUser)).Methods(http.MethodPost)
-	ur.HandleFunc("/login", middleware.PanicRecoverer(userHandler.Login)).Methods(http.MethodPost)
-	ur.HandleFunc("/link", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkEmail))).Methods(http.MethodPost)
-	ur.HandleFunc("/link/email", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkEmail))).Methods(http.MethodPost)
-	ur.HandleFunc("/link/phone", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkPhoneNumber))).Methods(http.MethodPost)
-	ur.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userHandler.Update))).Methods(http.MethodPatch)
+	ur.HandleFunc("/register", userHandler.CreateUser).Methods(http.MethodPost)
+	ur.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
+	ur.HandleFunc("/link", middleware.Authorized(userHandler.LinkEmail)).Methods(http.MethodPost)
+	ur.HandleFunc("/link/email", middleware.Authorized(userHandler.LinkEmail)).Methods(http.MethodPost)
+	ur.HandleFunc("/link/phone", middleware.Authorized(userHandler.LinkPhoneNumber)).Methods(http.MethodPost)
+	ur.HandleFunc("", middleware.Authorized(userHandler.Update)).Methods(http.MethodPatch)
 
 	// user friends routes
 	ufr := v1.PathPrefix("/friend").Subrouter()
-	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userFriendsHandler.CreateUserFriends))).Methods(http.MethodPost)
-	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userFriendsHandler.DeleteUserFriends))).Methods(http.MethodDelete)
-	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userHandler.ListUser))).Methods(http.MethodGet)
+	ufr.HandleFunc("", middleware.Authorized(userFriendsHandler.CreateUserFriends)).Methods(http.MethodPost)
+	ufr.HandleFunc("", middleware.Authorized(userFriendsHandler.DeleteUserFriends)).Methods(http.MethodDelete)
+	ufr.HandleFunc("", middleware.Authorized(userHandler.ListUser)).Methods(http.MethodGet)
 
 	// image routes
 	ir := v1.PathPrefix("/image").Subrouter()
-	ir.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(imageHandler.UploadToS3))).Methods(http.MethodPost)
+	ir.HandleFunc("", middleware.Authorized(imageHandler.UploadToS3)).Methods(http.MethodPost)
 
 	// posts routes
 	pr := v1.PathPrefix("/post").Subrouter()
-	pr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(postsHandler.CreatePost))).Methods(http.MethodPost)
-	pr.HandleFunc("/comment", middleware.PanicRecoverer(middleware.Authorized(postsHandler.CreatePostComment))).Methods(http.MethodPost)
-	pr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(postsHandler.ListPost))).Methods(http.MethodGet)
+	pr.HandleFunc("", middleware.Authorized(postsHandler.CreatePost)).Methods(http.MethodPost)
+	pr.HandleFunc("/comment", middleware.Authorized(postsHandler.CreatePostComment)).Methods(http.MethodPost)
+	pr.HandleFunc("", middleware.Authorized(postsHandler.ListPost)).Methods(http.MethodGet)
 
 	httpServer := &http.Server{
 		Addr:     ":8000",
