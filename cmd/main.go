@@ -33,14 +33,17 @@ func main() {
 	slog.SetDefault(slog.New(slogHandler))
 
 	// Connect to database
-	env := os.Getenv("ENV")
-	sslMode := "disable"
-	if env == "production" {
-		sslMode = "verify-full sslrootcert=ap-southeast-1-bundle.pem"
-	}
-	dbURL := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"), sslMode)
-	db, err := db.Connect(dbURL)
+	// env := os.Getenv("ENV")
+	// sslMode := "disable"
+	// if env == "production" {
+	// 	sslMode = "verify-full sslrootcert=ap-southeast-1-bundle.pem"
+	// }
+	// connStr := "postgres://[user]:[password]@[neon_hostname]/[dbname]?sslmode=require"
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?%s",
+		os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_NAME"), os.Getenv("DB_PARAMS"))
+	// dbURL := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+	// 	os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"), sslMode)
+	db, err := db.Connect(connStr)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Cannot connect to database: %v", err))
 		os.Exit(1)
@@ -65,7 +68,7 @@ func main() {
 
 	// initialize image domain
 	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String("ap-southeast-1"),
+		Region:      aws.String(os.Getenv("S3_REGION")),
 		Credentials: credentials.NewStaticCredentials(os.Getenv("S3_ID"), os.Getenv("S3_SECRET_KEY"), ""),
 	})
 	if err != nil {
