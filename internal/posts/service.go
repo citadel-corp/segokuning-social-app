@@ -13,6 +13,7 @@ import (
 type Service interface {
 	Create(ctx context.Context, req CreatePostPayload) Response
 	CreatePostComment(ctx context.Context, req CreatePostCommentPayload) Response
+	List(ctx context.Context, req ListPostPayload) Response
 }
 
 type postsService struct {
@@ -75,4 +76,21 @@ func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostComm
 	}
 
 	return SuccessCreateCommentResponse
+}
+
+func (s *postsService) List(ctx context.Context, req ListPostPayload) Response {
+	serviceName := "posts.List"
+	posts, pagination, err := s.repository.List(ctx, req)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			slog.Error(fmt.Sprintf("[%s] error while fetching posts: %s", serviceName, err.Error()))
+			return ErrorInternal
+		}
+	}
+
+	resp := SuccessListResponse
+	resp.Data = posts
+	resp.Meta = pagination
+
+	return resp
 }

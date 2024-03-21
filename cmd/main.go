@@ -106,6 +106,7 @@ func main() {
 	pr := v1.PathPrefix("/post").Subrouter()
 	pr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(postsHandler.CreatePost))).Methods(http.MethodPost)
 	pr.HandleFunc("/comment", middleware.PanicRecoverer(middleware.Authorized(postsHandler.CreatePostComment))).Methods(http.MethodPost)
+	pr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(postsHandler.ListPost))).Methods(http.MethodGet)
 
 	httpServer := &http.Server{
 		Addr:     ":8000",

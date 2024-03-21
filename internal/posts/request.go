@@ -38,3 +38,11 @@ func (p CreatePostCommentPayload) Validate() error {
 		validation.Field(&p.Comment, validation.Required, validation.Length(2, 500)),
 	)
 }
+
+type ListPostPayload struct {
+	UserID     string
+	Search     string   `schema:"search" binding:"omitempty"`
+	SearchTags []string `schema:"searchTag" binding:"omitempty"`
+	Limit      int      `schema:"limit" binding:"omitempty"`
+	Offset     int      `schema:"offset" binding:"omitempty"`
+}

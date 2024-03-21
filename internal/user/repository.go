@@ -189,6 +189,10 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 		orderStatement = fmt.Sprintf("%s ORDER BY users.created_at %s", orderStatement, orderBy)
 	}
 
+	if filter.Limit == 0 {
+		filter.Limit = 5
+	}
+
 	var rows *sql.Rows
 	var err error
 	pagination = &response.Pagination{
@@ -196,65 +200,36 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 		Offset: filter.Offset,
 	}
 
-	if filter.Limit != 0 {
-		selectStatement = fmt.Sprintf(`
-			SELECT COUNT(*) OVER() AS total_count, users.id as productId, users.name as name, users.image_url as imageUrl, 
-				users.friend_count as friendCount, users.created_at as createdAt 
-			FROM users 
-		%s`, selectStatement)
+	selectStatement = fmt.Sprintf(`
+		SELECT COUNT(*) OVER() AS total_count, users.id as productId, users.name as name, users.image_url as imageUrl, 
+			users.friend_count as friendCount, users.created_at as createdAt 
+		FROM users 
+	%s`, selectStatement)
 
-		paginationStatement = fmt.Sprintf("%s LIMIT $%d", paginationStatement, columnCtr)
-		args = append(args, filter.Limit)
-		columnCtr++
+	paginationStatement = fmt.Sprintf("%s LIMIT $%d", paginationStatement, columnCtr)
+	args = append(args, filter.Limit)
+	columnCtr++
 
-		paginationStatement = fmt.Sprintf("%s OFFSET $%d", paginationStatement, columnCtr)
-		args = append(args, filter.Offset)
+	paginationStatement = fmt.Sprintf("%s OFFSET $%d", paginationStatement, columnCtr)
+	args = append(args, filter.Offset)
 
-		query = fmt.Sprintf("%s %s %s %s %s;", selectStatement, joinStatement, whereStatement, orderStatement, paginationStatement)
+	query = fmt.Sprintf("%s %s %s %s %s;", selectStatement, joinStatement, whereStatement, orderStatement, paginationStatement)
 
-		// sanitize query
-		query = strings.Replace(query, "\t", "", -1)
-		query = strings.Replace(query, "\n", "", -1)
+	// sanitize query
+	query = strings.Replace(query, "\t", "", -1)
+	query = strings.Replace(query, "\n", "", -1)
 
-		rows, err = d.db.DB().QueryContext(ctx, query, args...)
-		if err != nil {
-			return nil, nil, err
+	rows, err = d.db.DB().QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for rows.Next() {
+		var u UserListResponse
+		if err := rows.Scan(&pagination.Total, &u.ID, &u.Name, &u.ImageURL, &u.FriendCount, &u.CreatedAt); err != nil {
+			return users, nil, err
 		}
-
-		for rows.Next() {
-			var u UserListResponse
-			if err := rows.Scan(&pagination.Total, &u.ID, &u.Name, &u.ImageURL, &u.FriendCount, &u.CreatedAt); err != nil {
-				return users, nil, err
-			}
-			users = append(users, u)
-		}
-	} else {
-		selectStatement = fmt.Sprintf(`
-			SELECT users.id as productId, users.name as name, users.image_url as imageUrl, 
-				users.friend_count as friendCount, users.created_at as createdAt 
-			FROM users
-		%s`, selectStatement)
-
-		query = fmt.Sprintf("%s %s %s %s %s;", selectStatement, joinStatement, whereStatement, orderStatement, paginationStatement)
-
-		// sanitize query
-		query = strings.Replace(query, "\t", "", -1)
-		query = strings.Replace(query, "\n", "", -1)
-
-		rows, err = d.db.DB().QueryContext(ctx, query, args...)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		for rows.Next() {
-			var u UserListResponse
-			if err := rows.Scan(&u.ID, &u.Name, &u.ImageURL, &u.FriendCount, &u.CreatedAt); err != nil {
-				return users, nil, err
-			}
-			users = append(users, u)
-		}
-
-		pagination.Total = len(users)
+		users = append(users, u)
 	}
 
 	defer rows.Close()
