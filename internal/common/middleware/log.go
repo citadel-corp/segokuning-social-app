@@ -2,9 +2,13 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/citadel-corp/segokuning-social-app/internal/common/id"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/response"
 )
 
 type LogResponseWriter struct {
@@ -30,13 +34,22 @@ func (w *LogResponseWriter) Write(body []byte) (int, error) {
 func Logging(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
-
+		requestID := id.GenerateStringID(12)
 		logRespWriter := NewLogResponseWriter(w)
 		next.ServeHTTP(logRespWriter, r)
+
 		slog.Debug("request information",
 			slog.Duration("duration", time.Since(startTime)),
 			slog.Int("status", logRespWriter.statusCode),
 			slog.String("uri", r.RequestURI),
+			slog.String("requestID", requestID),
 		)
+		var resp response.ResponseBody
+		err := json.NewDecoder(&logRespWriter.buf).Decode(&resp)
+		if logRespWriter.statusCode >= 500 && err == nil {
+			slog.Error("internal server error on request",
+				slog.String("error", resp.Error),
+			)
+		}
 	})
 }
