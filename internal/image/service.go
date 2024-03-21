@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/google/uuid"
 )
 
 var (
@@ -16,7 +17,7 @@ var (
 )
 
 type Service interface {
-	UploadToS3(ctx context.Context, readSeeker io.ReadSeeker, filename string) (*ImageResponse, error)
+	UploadToS3(ctx context.Context, readSeeker io.ReadSeeker) (*ImageResponse, error)
 }
 
 type imageService struct {
@@ -29,9 +30,9 @@ func NewService(awsSession *session.Session) Service {
 	}
 }
 
-func (s *imageService) UploadToS3(ctx context.Context, readSeeker io.ReadSeeker, filename string) (*ImageResponse, error) {
+func (s *imageService) UploadToS3(ctx context.Context, readSeeker io.ReadSeeker) (*ImageResponse, error) {
 	svc := s3.New(s.awsSession)
-
+	filename := uuid.NewString()
 	// This uploads the contents of the buffer to S3
 	_, err := svc.PutObject(&s3.PutObjectInput{
 		Bucket:      aws.String(bucket),

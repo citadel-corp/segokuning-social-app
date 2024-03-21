@@ -60,7 +60,7 @@ func (h *Handler) UploadToS3(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp, err := h.service.UploadToS3(r.Context(), file, header.Filename)
+	resp, err := h.service.UploadToS3(r.Context(), file)
 	if err != nil {
 		response.JSON(w, http.StatusInternalServerError, response.ResponseBody{
 			Message: "Unable to upload file",
