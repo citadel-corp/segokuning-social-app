@@ -22,10 +22,14 @@ import (
 	"github.com/citadel-corp/segokuning-social-app/internal/user"
 	userfriends "github.com/citadel-corp/segokuning-social-app/internal/user_friends"
 	"github.com/gorilla/mux"
+	"github.com/lmittmann/tint"
 )
 
 func main() {
-	slogHandler := slog.NewTextHandler(os.Stdout, nil)
+	slogHandler := tint.NewHandler(os.Stdout, &tint.Options{
+		Level:      slog.LevelDebug,
+		TimeFormat: time.RFC3339,
+	})
 	slog.SetDefault(slog.New(slogHandler))
 
 	// Connect to database
@@ -77,6 +81,7 @@ func main() {
 	postsHandler := posts.NewHandler(postsService)
 
 	r := mux.NewRouter()
+	r.Use(middleware.Logging)
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text")
 		io.WriteString(w, "Service ready")
