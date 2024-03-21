@@ -119,7 +119,7 @@ func main() {
 	pr.HandleFunc("", middleware.Authorized(postsHandler.ListPost)).Methods(http.MethodGet)
 
 	httpServer := &http.Server{
-		Addr:     ":8000",
+		Addr:     ":8080",
 		Handler:  r,
 		ErrorLog: slog.NewLogLogger(slogHandler, slog.LevelError),
 	}
