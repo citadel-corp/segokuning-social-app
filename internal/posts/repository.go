@@ -2,13 +2,22 @@ package posts
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
+	"log/slog"
+	"strings"
 
+	"github.com/citadel-corp/segokuning-social-app/internal/comments"
 	"github.com/citadel-corp/segokuning-social-app/internal/common/db"
+	"github.com/citadel-corp/segokuning-social-app/internal/common/response"
+	"github.com/citadel-corp/segokuning-social-app/internal/user"
+	"github.com/lib/pq"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 type Repository interface {
 	Create(ctx context.Context, post *Posts) error
+	List(ctx context.Context, filter ListPostPayload) ([]ListPostResponse, *response.Pagination, error)
 }
 
 type dbRepository struct {
@@ -37,4 +46,123 @@ func (d *dbRepository) Create(ctx context.Context, post *Posts) error {
 	}
 
 	return nil
+}
+
+func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]ListPostResponse, *response.Pagination, error) {
+	var resp []ListPostResponse
+	var pagination *response.Pagination
+
+	var (
+		selectStatement     string
+		whereStatement      string
+		query               string
+		joinStatement       string
+		orderStatement      string
+		paginationStatement string
+		args                []interface{}
+		columnCtr           int = 1
+	)
+
+	var rows *sql.Rows
+	var err error
+	pagination = &response.Pagination{
+		Limit:  filter.Limit,
+		Offset: filter.Offset,
+	}
+
+	joinStatement = fmt.Sprintf("%s LEFT JOIN user_friends uf ON uf.user_id = $%d AND p.user_id = uf.friend_id", joinStatement, columnCtr)
+	args = append(args, filter.UserID)
+	columnCtr++
+
+	whereStatement = fmt.Sprintf("%s WHERE (p.user_id = $%d OR p.user_id = uf.friend_id)", whereStatement, columnCtr)
+	args = append(args, filter.UserID)
+	columnCtr++
+
+	if filter.Limit == 0 {
+		filter.Limit = 5
+	}
+
+	selectStatement = fmt.Sprintf(`
+		SELECT COUNT(*) OVER() AS total_count, p.id as postId, p."content" as postInHtml, p.tags, p.created_at as product_created_at,
+			c.id, c."content" as "comment", c.created_at as comment_created_at,
+			pu.id as userId, pu.name as name, pu.image_url as imageUrl, pu.friend_count as friendCount,
+			pu.created_at as user_created_at,
+			cu.id as userId, cu.name as name, cu.image_url as imageUrl, cu.friend_count as friendCount 
+		FROM posts p 
+		JOIN users pu ON pu.id = p.user_id 
+		LEFT JOIN "comments" c ON p.id = c.post_id 
+		LEFT JOIN users cu ON cu.id = c.user_id
+	%s`, selectStatement)
+
+	paginationStatement = fmt.Sprintf("%s LIMIT $%d", paginationStatement, columnCtr)
+	args = append(args, filter.Limit)
+	columnCtr++
+
+	paginationStatement = fmt.Sprintf("%s OFFSET $%d", paginationStatement, columnCtr)
+	args = append(args, filter.Offset)
+
+	query = fmt.Sprintf("%s %s %s %s %s;", selectStatement, joinStatement, whereStatement, orderStatement, paginationStatement)
+
+	// sanitize query
+	query = strings.Replace(query, "\t", "", -1)
+	query = strings.Replace(query, "\n", "", -1)
+
+	slog.Info("query ", query)
+
+	rows, err = d.db.DB().QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var ctrIndex int = 0
+	resp = append(resp, ListPostResponse{})
+	for rows.Next() {
+		var p PostResponse
+		var c comments.CommentResponse
+		var pu user.UserGetResponse
+		var cu user.UserCommentResponse
+		if err := rows.Scan(&pagination.Total, &p.ID, &p.Content, pq.Array(&p.Tags), &p.CreatedAt,
+			&c.ID, &c.Content, &c.CreatedAt,
+			&pu.ID, &pu.Name, &pu.ImageURL, &pu.FriendCount, &pu.CreatedAt,
+			&cu.ID, &cu.Name, &cu.ImageURL, &cu.FriendCount); err != nil {
+			return resp, nil, err
+		}
+
+		if resp[ctrIndex].PostID == "" {
+			resp[ctrIndex].PostID = p.ID
+			resp[ctrIndex].Post = p
+			resp[ctrIndex].User = pu
+			resp[ctrIndex].Comments = []comments.CommentResponse{}
+		} else if resp[ctrIndex].PostID != p.ID {
+			ctrIndex++
+			resp = append(resp, ListPostResponse{
+				PostID:   p.ID,
+				Post:     p,
+				User:     pu,
+				Comments: []comments.CommentResponse{},
+			})
+		}
+
+		if c.ID != nil {
+			c.User = cu
+			resp[ctrIndex].Comments = append(resp[ctrIndex].Comments, c)
+		}
+	}
+
+	pagination.Total = len(resp)
+
+	defer rows.Close()
+
+	if err = rows.Err(); err != nil {
+		return resp, nil, err
+	}
+
+	return resp, pagination, nil
+}
+
+func insertWhereStatement(condition bool, statement string) string {
+	if condition {
+		return fmt.Sprintf(`%v AND`, statement)
+	}
+	return fmt.Sprintf(`%v WHERE`, statement)
 }
