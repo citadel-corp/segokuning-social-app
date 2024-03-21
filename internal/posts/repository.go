@@ -54,10 +54,7 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 	var (
 		withStatement   string
 		selectStatement string
-		whereStatement  string
 		query           string
-		joinStatement   string
-		orderStatement  string
 		args            []interface{}
 		columnCtr       int = 1
 	)
@@ -120,7 +117,7 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 		ORDER BY p.created_at desc
 	`
 
-	query = fmt.Sprintf("%s %s %s %s %s;", withStatement, selectStatement, joinStatement, whereStatement, orderStatement)
+	query = fmt.Sprintf("%s %s %s %s %s;", withStatement, selectStatement)
 
 	// sanitize query
 	query = strings.Replace(query, "\t", "", -1)
