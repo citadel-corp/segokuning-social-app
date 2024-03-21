@@ -11,6 +11,7 @@ type Repository interface {
 	AddFriend(ctx context.Context, userFriend *UserFriends) error
 	RemoveFriend(ctx context.Context, userID string, friendID string) error
 	GetByFriendID(ctx context.Context, userID string, friendID string) (*UserFriends, error)
+	ListByUserID(ctx context.Context, userID string) ([]*UserFriends, error)
 }
 
 type dbRepository struct {
@@ -106,4 +107,34 @@ func (d *dbRepository) GetByFriendID(ctx context.Context, userID string, friendI
 	}
 
 	return &u, nil
+}
+
+// ListByUserID implements Repository.
+func (d *dbRepository) ListByUserID(ctx context.Context, userID string) ([]*UserFriends, error) {
+	getQuery := `
+		SELECT id, user_id, friend_id, created_at FROM user_friends
+		WHERE user_id = $1;
+	`
+	rows, err := d.db.DB().QueryContext(ctx, getQuery, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var res []*UserFriends
+	for rows.Next() {
+		u := &UserFriends{}
+		err := rows.Scan(&u.ID, &u.UserID, &u.FriendID, &u.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, u)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }

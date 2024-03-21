@@ -16,6 +16,8 @@ import (
 
 type Repository interface {
 	Create(ctx context.Context, post *Posts) error
+	GetByID(ctx context.Context, id string) (*Posts, error)
+	CreateComment(ctx context.Context, comment *Comment) error
 	List(ctx context.Context, filter ListPostPayload) ([]ListPostResponse, *response.Pagination, error)
 }
 
@@ -47,6 +49,40 @@ func (d *dbRepository) Create(ctx context.Context, post *Posts) error {
 	return nil
 }
 
+// GetByID implements Repository.
+func (d *dbRepository) GetByID(ctx context.Context, id string) (*Posts, error) {
+	row := d.db.DB().QueryRowContext(ctx, `
+		SELECT id, user_id, content, tags, created_at
+		FROM posts
+		WHERE id = $1;
+	`, id)
+
+	p := &Posts{}
+	err := row.Scan(&p.ID, &p.UserID, &p.Content, pq.Array(&p.Tags), &p.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+func (d *dbRepository) CreateComment(ctx context.Context, comment *Comment) error {
+	row := d.db.DB().QueryRowContext(ctx, `
+			INSERT INTO comments (
+				user_id, post_id, content
+			) VALUES (
+				$1, $2, $3
+			)
+			RETURNING id
+		`, comment.UserID, comment.PostID, comment.Content)
+	var id uint64
+	err := row.Scan(&id)
+	if err != nil {
+		return err
+	}
+	comment.ID = id
+	return nil
+}
+
 func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]ListPostResponse, *response.Pagination, error) {
 	var resp []ListPostResponse
 	var pagination *response.Pagination
@@ -72,11 +108,11 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 
 	withStatement = fmt.Sprintf(`
 		WITH p AS (
-			SELECT COUNT(*) OVER() AS total_count, posts.* 
-			FROM posts 
-			LEFT JOIN user_friends uf ON uf.user_id = $%d 
-			AND posts.user_id = uf.friend_id 
-			WHERE (posts.user_id = $%d OR posts.user_id = uf.friend_id) 
+			SELECT COUNT(*) OVER() AS total_count, posts.*
+			FROM posts
+			LEFT JOIN user_friends uf ON uf.user_id = $%d
+			AND posts.user_id = uf.friend_id
+			WHERE (posts.user_id = $%d OR posts.user_id = uf.friend_id)
 	`, columnCtr, columnCtr+1)
 	args = append(args, filter.UserID)
 	columnCtr++
@@ -109,11 +145,11 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 			c.id, c."content" as "comment", c.created_at as comment_created_at,
 			pu.id as userId, pu.name as name, pu.image_url as imageUrl, pu.friend_count as friendCount,
 			pu.created_at as user_created_at,
-			cu.id as userId, cu.name as name, cu.image_url as imageUrl, cu.friend_count as friendCount 
-		FROM p 
-		JOIN users pu ON pu.id = p.user_id 
-		LEFT JOIN "comments" c ON p.id = c.post_id 
-		LEFT JOIN users cu ON cu.id = c.user_id 
+			cu.id as userId, cu.name as name, cu.image_url as imageUrl, cu.friend_count as friendCount
+		FROM p
+		JOIN users pu ON pu.id = p.user_id
+		LEFT JOIN "comments" c ON p.id = c.post_id
+		LEFT JOIN users cu ON cu.id = c.user_id
 		ORDER BY p.created_at desc
 	`
 

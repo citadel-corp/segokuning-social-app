@@ -43,11 +43,11 @@ func main() {
 	}
 
 	// Create migrations
-	err = db.UpMigration()
-	if err != nil {
-		slog.Error(fmt.Sprintf("Up migration failed: %v", err))
-		os.Exit(1)
-	}
+	// err = db.UpMigration()
+	// if err != nil {
+	// 	slog.Error(fmt.Sprintf("Up migration failed: %v", err))
+	// 	os.Exit(1)
+	// }
 
 	// initialize user domain
 	userRepository := user.NewRepository(db)
@@ -73,7 +73,7 @@ func main() {
 
 	// initialize posts domain
 	postsRepository := posts.NewRepository(db)
-	postsService := posts.NewService(postsRepository)
+	postsService := posts.NewService(postsRepository, userFriendsRepository)
 	postsHandler := posts.NewHandler(postsService)
 
 	r := mux.NewRouter()
@@ -105,6 +105,7 @@ func main() {
 	// posts routes
 	pr := v1.PathPrefix("/post").Subrouter()
 	pr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(postsHandler.CreatePost))).Methods(http.MethodPost)
+	pr.HandleFunc("/comment", middleware.PanicRecoverer(middleware.Authorized(postsHandler.CreatePostComment))).Methods(http.MethodPost)
 	pr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(postsHandler.ListPost))).Methods(http.MethodGet)
 
 	httpServer := &http.Server{
