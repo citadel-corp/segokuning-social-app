@@ -43,6 +43,7 @@ func Logging(next http.Handler) http.Handler {
 			slog.Int("status", logRespWriter.statusCode),
 			slog.String("uri", r.RequestURI),
 			slog.String("requestID", requestID),
+			slog.String("method", r.Method),
 		)
 		var resp response.ResponseBody
 		err := json.NewDecoder(&logRespWriter.buf).Decode(&resp)
