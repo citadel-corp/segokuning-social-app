@@ -127,9 +127,10 @@ func (h *Handler) ListPost(w http.ResponseWriter, r *http.Request) {
 	req.UserID = userID
 
 	resp := h.service.List(r.Context(), req)
-	if err != nil {
+	if resp.Error != nil {
 		response.JSON(w, resp.Code, response.ResponseBody{
 			Message: resp.Message,
+			Error:   resp.Error.Error(),
 		})
 		return
 	}
