@@ -22,21 +22,28 @@ import (
 	"github.com/citadel-corp/segokuning-social-app/internal/user"
 	userfriends "github.com/citadel-corp/segokuning-social-app/internal/user_friends"
 	"github.com/gorilla/mux"
+	"github.com/lmittmann/tint"
 )
 
 func main() {
-	slogHandler := slog.NewTextHandler(os.Stdout, nil)
+	slogHandler := tint.NewHandler(os.Stdout, &tint.Options{
+		Level:      slog.LevelDebug,
+		TimeFormat: time.RFC3339,
+	})
 	slog.SetDefault(slog.New(slogHandler))
 
 	// Connect to database
-	env := os.Getenv("ENV")
-	sslMode := "disable"
-	if env == "production" {
-		sslMode = "verify-full sslrootcert=ap-southeast-1-bundle.pem"
-	}
-	dbURL := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
-		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"), sslMode)
-	db, err := db.Connect(dbURL)
+	// env := os.Getenv("ENV")
+	// sslMode := "disable"
+	// if env == "production" {
+	// 	sslMode = "verify-full sslrootcert=ap-southeast-1-bundle.pem"
+	// }
+	// connStr := "postgres://[user]:[password]@[neon_hostname]/[dbname]?sslmode=require"
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?%s",
+		os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_NAME"), os.Getenv("DB_PARAMS"))
+	// dbURL := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+	// 	os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USERNAME"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"), sslMode)
+	db, err := db.Connect(connStr)
 	if err != nil {
 		slog.Error(fmt.Sprintf("Cannot connect to database: %v", err))
 		os.Exit(1)
@@ -61,7 +68,7 @@ func main() {
 
 	// initialize image domain
 	sess, err := session.NewSession(&aws.Config{
-		Region:      aws.String("ap-southeast-1"),
+		Region:      aws.String(os.Getenv("S3_REGION")),
 		Credentials: credentials.NewStaticCredentials(os.Getenv("S3_ID"), os.Getenv("S3_SECRET_KEY"), ""),
 	})
 	if err != nil {
@@ -77,6 +84,9 @@ func main() {
 	postsHandler := posts.NewHandler(postsService)
 
 	r := mux.NewRouter()
+	r.Use(middleware.Logging)
+	r.Use(middleware.PanicRecoverer)
+
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text")
 		io.WriteString(w, "Service ready")
@@ -86,30 +96,30 @@ func main() {
 
 	// user routes
 	ur := v1.PathPrefix("/user").Subrouter()
-	ur.HandleFunc("/register", middleware.PanicRecoverer(userHandler.CreateUser)).Methods(http.MethodPost)
-	ur.HandleFunc("/login", middleware.PanicRecoverer(userHandler.Login)).Methods(http.MethodPost)
-	ur.HandleFunc("/link/email", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkEmail))).Methods(http.MethodPost)
-	ur.HandleFunc("/link/phone", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkPhoneNumber))).Methods(http.MethodPost)
-	ur.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userHandler.Update))).Methods(http.MethodPatch)
+	ur.HandleFunc("/register", userHandler.CreateUser).Methods(http.MethodPost)
+	ur.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
+	ur.HandleFunc("/link/email", middleware.Authorized(userHandler.LinkEmail)).Methods(http.MethodPost)
+	ur.HandleFunc("/link/phone", middleware.Authorized(userHandler.LinkPhoneNumber)).Methods(http.MethodPost)
+	ur.HandleFunc("", middleware.Authorized(userHandler.Update)).Methods(http.MethodPatch)
 
 	// user friends routes
 	ufr := v1.PathPrefix("/friend").Subrouter()
-	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userFriendsHandler.CreateUserFriends))).Methods(http.MethodPost)
-	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userFriendsHandler.DeleteUserFriends))).Methods(http.MethodDelete)
-	ufr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userHandler.ListUser))).Methods(http.MethodGet)
+	ufr.HandleFunc("", middleware.Authorized(userFriendsHandler.CreateUserFriends)).Methods(http.MethodPost)
+	ufr.HandleFunc("", middleware.Authorized(userFriendsHandler.DeleteUserFriends)).Methods(http.MethodDelete)
+	ufr.HandleFunc("", middleware.Authorized(userHandler.ListUser)).Methods(http.MethodGet)
 
 	// image routes
 	ir := v1.PathPrefix("/image").Subrouter()
-	ir.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(imageHandler.UploadToS3))).Methods(http.MethodPost)
+	ir.HandleFunc("", middleware.Authorized(imageHandler.UploadToS3)).Methods(http.MethodPost)
 
 	// posts routes
 	pr := v1.PathPrefix("/post").Subrouter()
-	pr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(postsHandler.CreatePost))).Methods(http.MethodPost)
-	pr.HandleFunc("/comment", middleware.PanicRecoverer(middleware.Authorized(postsHandler.CreatePostComment))).Methods(http.MethodPost)
-	pr.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(postsHandler.ListPost))).Methods(http.MethodGet)
+	pr.HandleFunc("", middleware.Authorized(postsHandler.CreatePost)).Methods(http.MethodPost)
+	pr.HandleFunc("/comment", middleware.Authorized(postsHandler.CreatePostComment)).Methods(http.MethodPost)
+	pr.HandleFunc("", middleware.Authorized(postsHandler.ListPost)).Methods(http.MethodGet)
 
 	httpServer := &http.Server{
-		Addr:     ":8000",
+		Addr:     ":8080",
 		Handler:  r,
 		ErrorLog: slog.NewLogLogger(slogHandler, slog.LevelError),
 	}

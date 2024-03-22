@@ -201,9 +201,9 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 	}
 
 	selectStatement = fmt.Sprintf(`
-		SELECT COUNT(*) OVER() AS total_count, users.id as productId, users.name as name, users.image_url as imageUrl, 
-			users.friend_count as friendCount, users.created_at as createdAt 
-		FROM users 
+		SELECT COUNT(*) OVER() AS total_count, users.id as productId, users.name as name, users.image_url as imageUrl,
+			users.friend_count as friendCount, users.created_at as createdAt
+		FROM users
 	%s`, selectStatement)
 
 	paginationStatement = fmt.Sprintf("%s LIMIT $%d", paginationStatement, columnCtr)
@@ -214,10 +214,6 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 	args = append(args, filter.Offset)
 
 	query = fmt.Sprintf("%s %s %s %s %s;", selectStatement, joinStatement, whereStatement, orderStatement, paginationStatement)
-
-	// sanitize query
-	query = strings.Replace(query, "\t", "", -1)
-	query = strings.Replace(query, "\n", "", -1)
 
 	rows, err = d.db.DB().QueryContext(ctx, query, args...)
 	if err != nil {
