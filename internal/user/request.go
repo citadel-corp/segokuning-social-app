@@ -101,7 +101,7 @@ func (p ListUserPayload) Validate() error {
 	return validation.ValidateStruct(&p,
 		validation.Field(&p.SortBy, validation.In(userSortBys...)),
 		validation.Field(&p.OrderBy, validation.In("asc", "desc")),
-		validation.Field(&p.Limit, validation.When(p.Offset != 0, validation.Required)),
-		validation.Field(&p.Offset, validation.When(p.Limit != 0, validation.NotNil)),
+		// validation.Field(&p.Limit, validation.When(p.Offset != 0, validation.Required)),
+		// validation.Field(&p.Offset, validation.When(p.Limit != 0, validation.NotNil)),
 	)
 }
