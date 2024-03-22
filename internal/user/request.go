@@ -61,7 +61,7 @@ type LinkPhoneNumberPayload struct {
 
 func (p LinkPhoneNumberPayload) Validate() error {
 	return validation.ValidateStruct(&p,
-		validation.Field(&p.Phone, validation.Required, validation.Length(7, 13), phoneNumberValidationRule),
+		validation.Field(&p.Phone, validation.Required, phoneNumberValidationRule, validation.Length(7, 13)),
 	)
 }
 

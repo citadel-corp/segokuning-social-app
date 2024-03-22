@@ -88,6 +88,7 @@ func main() {
 	ur := v1.PathPrefix("/user").Subrouter()
 	ur.HandleFunc("/register", middleware.PanicRecoverer(userHandler.CreateUser)).Methods(http.MethodPost)
 	ur.HandleFunc("/login", middleware.PanicRecoverer(userHandler.Login)).Methods(http.MethodPost)
+	ur.HandleFunc("/link", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkEmail))).Methods(http.MethodPost)
 	ur.HandleFunc("/link/email", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkEmail))).Methods(http.MethodPost)
 	ur.HandleFunc("/link/phone", middleware.PanicRecoverer(middleware.Authorized(userHandler.LinkPhoneNumber))).Methods(http.MethodPost)
 	ur.HandleFunc("", middleware.PanicRecoverer(middleware.Authorized(userHandler.Update))).Methods(http.MethodPatch)
