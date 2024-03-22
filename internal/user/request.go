@@ -40,7 +40,7 @@ func (p LoginPayload) Validate() error {
 		validation.Field(&p.CredentialType, validation.Required, validation.In("phone", "email")),
 		validation.Field(&p.CredentialValue, validation.Required, validation.
 			When(p.CredentialType == "email", is.EmailFormat).
-			Else(validation.Length(7, 13), phoneNumberValidationRule)),
+			Else(phoneNumberValidationRule, validation.Length(7, 13))),
 		validation.Field(&p.Password, validation.Required, validation.Length(5, 15)),
 	)
 }
