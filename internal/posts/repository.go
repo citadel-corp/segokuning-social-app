@@ -149,8 +149,8 @@ func (d *dbRepository) List(ctx context.Context, filter ListPostPayload) ([]List
 		FROM p
 		JOIN users pu ON pu.id = p.user_id
 		LEFT JOIN "comments" c ON p.id = c.post_id
-		LEFT JOIN users cu ON cu.id = c.user_id
-		ORDER BY p.created_at desc
+		LEFT JOIN users cu ON cu.id = c.user_id 
+		ORDER BY p.created_at desc, c.created_at desc
 	`
 
 	query = fmt.Sprintf("%s %s;", withStatement, selectStatement)

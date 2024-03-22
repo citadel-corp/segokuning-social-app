@@ -54,13 +54,16 @@ func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostComm
 	if err != nil {
 		return ErrorInternal
 	}
+
 	//validate post creator is users friend
-	_, err = s.userFriendsRepository.GetByFriendID(ctx, req.UserID, post.UserID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrorBadRequest
-	}
-	if err != nil {
-		return ErrorInternal
+	if post.UserID != req.UserID {
+		_, err = s.userFriendsRepository.GetByFriendID(ctx, req.UserID, post.UserID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrorBadRequest
+		}
+		if err != nil {
+			return ErrorInternal
+		}
 	}
 
 	comment := &Comment{
@@ -79,16 +82,18 @@ func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostComm
 }
 
 func (s *postsService) List(ctx context.Context, req ListPostPayload) Response {
-	serviceName := "posts.List"
+	var resp Response
+
 	posts, pagination, err := s.repository.List(ctx, req)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
-			slog.Error(fmt.Sprintf("[%s] error while fetching posts: %s", serviceName, err.Error()))
-			return ErrorInternal
+			resp = ErrorInternal
+			resp.Error = err
+			return resp
 		}
 	}
 
-	resp := SuccessListResponse
+	resp = SuccessListResponse
 	resp.Data = posts
 	resp.Meta = pagination
 
