@@ -8,7 +8,7 @@ import (
 type ResponseBody struct {
 	Message string      `json:"message,omitempty"`
 	Data    any         `json:"data,omitempty"`
-	Error   string      `json:"-,omitempty"`
+	Error   string      `json:"error,omitempty"`
 	Meta    *Pagination `json:"meta,omitempty"`
 }
 

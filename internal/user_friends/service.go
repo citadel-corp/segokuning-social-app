@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"log/slog"
 
 	"github.com/citadel-corp/segokuning-social-app/internal/user"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -26,7 +24,7 @@ func NewService(repository Repository, userRepository user.Repository) Service {
 }
 
 func (s *userFriendsService) Create(ctx context.Context, req CreateUserFriendPayload) Response {
-	serviceName := "userfriends.Create"
+	var resp Response
 
 	userFriend := &UserFriends{
 		UserID:   req.LoggedUserID,
@@ -47,20 +45,22 @@ func (s *userFriendsService) Create(ctx context.Context, req CreateUserFriendPay
 			case "23503":
 				return ErrFriendNotExists
 			default:
-				slog.Error(fmt.Sprintf("[%s] error while adding friend: %s", serviceName, err.Error()))
-				return ErrorInternal
+				resp = ErrorInternal
+				resp.Error = err.Error()
+				return resp
 			}
 		}
 
-		slog.Error(fmt.Sprintf("[%s] error while adding friend: %s", serviceName, err.Error()))
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
 
 	return SuccessCreateResponse
 }
 
 func (s *userFriendsService) Delete(ctx context.Context, req DeleteUserFriendPayload) Response {
-	serviceName := "userfriends.Delete"
+	var resp Response
 
 	if req.UserID == req.LoggedUserID {
 		return ErrCannotDeleteSelf
@@ -73,8 +73,9 @@ func (s *userFriendsService) Delete(ctx context.Context, req DeleteUserFriendPay
 			return ErrFriendNotExists
 		}
 
-		slog.Error(fmt.Sprintf("[%s] error while getting friend detail: %s", serviceName, err.Error()))
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
 
 	// check friendship
@@ -84,13 +85,16 @@ func (s *userFriendsService) Delete(ctx context.Context, req DeleteUserFriendPay
 			return ErrNotFriend
 		}
 
-		slog.Error(fmt.Sprintf("[%s] error while checking friendship: %s", serviceName, err.Error()))
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
 
 	err = s.repository.RemoveFriend(ctx, req.LoggedUserID, req.UserID)
 	if err != nil {
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
 
 	return SuccessDeleteResponse

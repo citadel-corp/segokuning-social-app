@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"log/slog"
 
 	userfriends "github.com/citadel-corp/segokuning-social-app/internal/user_friends"
 )
@@ -26,7 +24,7 @@ func NewService(repository Repository, userFriendsRepository userfriends.Reposit
 }
 
 func (s *postsService) Create(ctx context.Context, req CreatePostPayload) Response {
-	serviceName := "posts.Create"
+	var resp Response
 
 	post := &Posts{
 		UserID:  req.UserID,
@@ -36,15 +34,16 @@ func (s *postsService) Create(ctx context.Context, req CreatePostPayload) Respon
 
 	err := s.repository.Create(ctx, post)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[%s] error creating post: %s", serviceName, err.Error()))
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
 
 	return SuccessCreateResponse
 }
 
 func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostCommentPayload) Response {
-	serviceName := "posts.CreatePostComment"
+	var resp Response
 
 	//validate post is not found
 	post, err := s.repository.GetByID(ctx, req.PostID)
@@ -52,7 +51,9 @@ func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostComm
 		return ErrorNotFound
 	}
 	if err != nil {
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
 
 	//validate post creator is users friend
@@ -62,7 +63,9 @@ func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostComm
 			return ErrorBadRequest
 		}
 		if err != nil {
-			return ErrorInternal
+			resp = ErrorInternal
+			resp.Error = err.Error()
+			return resp
 		}
 	}
 
@@ -74,8 +77,9 @@ func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostComm
 
 	err = s.repository.CreateComment(ctx, comment)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[%s] error creating post: %v", serviceName, err))
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
 
 	return SuccessCreateCommentResponse
@@ -88,7 +92,7 @@ func (s *postsService) List(ctx context.Context, req ListPostPayload) Response {
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			resp = ErrorInternal
-			resp.Error = err
+			resp.Error = err.Error()
 			return resp
 		}
 	}

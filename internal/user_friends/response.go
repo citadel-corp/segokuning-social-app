@@ -7,7 +7,7 @@ type Response struct {
 	Message string
 	Data    any
 	Meta    *response.Pagination
-	Error   error
+	Error   string
 }
 
 var (
