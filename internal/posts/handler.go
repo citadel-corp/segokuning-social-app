@@ -27,15 +27,8 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	userID, err := getUserID(r)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
-
-		switch {
-		case errors.Is(err, ErrorUnauthorized.Error):
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
 	req.UserID = userID
@@ -60,6 +53,7 @@ func (h *Handler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	resp = h.service.Create(r.Context(), req)
 	response.JSON(w, resp.Code, response.ResponseBody{
 		Message: resp.Message,
+		Error:   resp.Error,
 	})
 	return
 }
@@ -72,15 +66,8 @@ func (h *Handler) CreatePostComment(w http.ResponseWriter, r *http.Request) {
 	userID, err := getUserID(r)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
-
-		switch {
-		case errors.Is(err, ErrorUnauthorized.Error):
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
 	req.UserID = userID
@@ -102,16 +89,15 @@ func (h *Handler) CreatePostComment(w http.ResponseWriter, r *http.Request) {
 	resp = h.service.CreatePostComment(r.Context(), req)
 	response.JSON(w, resp.Code, response.ResponseBody{
 		Message: resp.Message,
+		Error:   resp.Error,
 	})
 }
 
 func (h *Handler) ListPost(w http.ResponseWriter, r *http.Request) {
 	userID, err := getUserID(r)
 	if err != nil {
-		response.JSON(w, http.StatusUnauthorized, response.ResponseBody{
-			Message: "Unauthorized",
-			Error:   err.Error(),
-		})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	var req ListPostPayload
@@ -127,16 +113,11 @@ func (h *Handler) ListPost(w http.ResponseWriter, r *http.Request) {
 	req.UserID = userID
 
 	resp := h.service.List(r.Context(), req)
-	if err != nil {
-		response.JSON(w, resp.Code, response.ResponseBody{
-			Message: resp.Message,
-		})
-		return
-	}
 	response.JSON(w, resp.Code, response.ResponseBody{
 		Message: resp.Message,
 		Data:    resp.Data,
 		Meta:    resp.Meta,
+		Error:   resp.Error,
 	})
 }
 
@@ -145,5 +126,5 @@ func getUserID(r *http.Request) (string, error) {
 		return authValue, nil
 	}
 
-	return "", ErrorUnauthorized.Error
+	return "", errors.New("unauthorized")
 }

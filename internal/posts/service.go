@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"log/slog"
 
 	userfriends "github.com/citadel-corp/segokuning-social-app/internal/user_friends"
 )
@@ -26,7 +24,7 @@ func NewService(repository Repository, userFriendsRepository userfriends.Reposit
 }
 
 func (s *postsService) Create(ctx context.Context, req CreatePostPayload) Response {
-	serviceName := "posts.Create"
+	var resp Response
 
 	post := &Posts{
 		UserID:  req.UserID,
@@ -36,15 +34,16 @@ func (s *postsService) Create(ctx context.Context, req CreatePostPayload) Respon
 
 	err := s.repository.Create(ctx, post)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[%s] error creating post: %s", serviceName, err.Error()))
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
 
 	return SuccessCreateResponse
 }
 
 func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostCommentPayload) Response {
-	serviceName := "posts.CreatePostComment"
+	var resp Response
 
 	//validate post is not found
 	post, err := s.repository.GetByID(ctx, req.PostID)
@@ -52,15 +51,22 @@ func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostComm
 		return ErrorNotFound
 	}
 	if err != nil {
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
+
 	//validate post creator is users friend
-	_, err = s.userFriendsRepository.GetByFriendID(ctx, req.UserID, post.UserID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrorBadRequest
-	}
-	if err != nil {
-		return ErrorInternal
+	if post.UserID != req.UserID {
+		_, err = s.userFriendsRepository.GetByFriendID(ctx, req.UserID, post.UserID)
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrorBadRequest
+		}
+		if err != nil {
+			resp = ErrorInternal
+			resp.Error = err.Error()
+			return resp
+		}
 	}
 
 	comment := &Comment{
@@ -71,24 +77,27 @@ func (s *postsService) CreatePostComment(ctx context.Context, req CreatePostComm
 
 	err = s.repository.CreateComment(ctx, comment)
 	if err != nil {
-		slog.Error(fmt.Sprintf("[%s] error creating post: %v", serviceName, err))
-		return ErrorInternal
+		resp = ErrorInternal
+		resp.Error = err.Error()
+		return resp
 	}
 
 	return SuccessCreateCommentResponse
 }
 
 func (s *postsService) List(ctx context.Context, req ListPostPayload) Response {
-	serviceName := "posts.List"
+	var resp Response
+
 	posts, pagination, err := s.repository.List(ctx, req)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
-			slog.Error(fmt.Sprintf("[%s] error while fetching posts: %s", serviceName, err.Error()))
-			return ErrorInternal
+			resp = ErrorInternal
+			resp.Error = err.Error()
+			return resp
 		}
 	}
 
-	resp := SuccessListResponse
+	resp = SuccessListResponse
 	resp.Data = posts
 	resp.Meta = pagination
 

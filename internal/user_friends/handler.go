@@ -24,15 +24,8 @@ func (h *Handler) CreateUserFriends(w http.ResponseWriter, r *http.Request) {
 	userID, err := getUserID(r)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
-
-		switch {
-		case errors.Is(err, ErrorUnauthorized.Error):
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
 	req.LoggedUserID = userID
@@ -57,6 +50,7 @@ func (h *Handler) CreateUserFriends(w http.ResponseWriter, r *http.Request) {
 	resp := h.service.Create(r.Context(), req)
 	response.JSON(w, resp.Code, response.ResponseBody{
 		Message: resp.Message,
+		Error:   resp.Error,
 	})
 	return
 }
@@ -68,15 +62,8 @@ func (h *Handler) DeleteUserFriends(w http.ResponseWriter, r *http.Request) {
 	userID, err := getUserID(r)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
-
-		switch {
-		case errors.Is(err, ErrorUnauthorized.Error):
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		default:
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
 	req.LoggedUserID = userID
@@ -101,6 +88,7 @@ func (h *Handler) DeleteUserFriends(w http.ResponseWriter, r *http.Request) {
 	resp := h.service.Delete(r.Context(), req)
 	response.JSON(w, resp.Code, response.ResponseBody{
 		Message: resp.Message,
+		Error:   resp.Error,
 	})
 	return
 }
@@ -110,5 +98,5 @@ func getUserID(r *http.Request) (string, error) {
 		return authValue, nil
 	}
 
-	return "", ErrorUnauthorized.Error
+	return "", errors.New("unauthorized")
 }

@@ -98,6 +98,7 @@ func main() {
 	ur := v1.PathPrefix("/user").Subrouter()
 	ur.HandleFunc("/register", userHandler.CreateUser).Methods(http.MethodPost)
 	ur.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
+  ur.HandleFunc("/link", middleware.Authorized(userHandler.LinkEmail)).Methods(http.MethodPost)
 	ur.HandleFunc("/link/email", middleware.Authorized(userHandler.LinkEmail)).Methods(http.MethodPost)
 	ur.HandleFunc("/link/phone", middleware.Authorized(userHandler.LinkPhoneNumber)).Methods(http.MethodPost)
 	ur.HandleFunc("", middleware.Authorized(userHandler.Update)).Methods(http.MethodPatch)

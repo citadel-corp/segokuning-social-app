@@ -25,7 +25,7 @@ func NewRepository(db *db.DB) Repository {
 func (d *dbRepository) AddFriend(ctx context.Context, userFriend *UserFriends) error {
 	err := d.db.StartTx(ctx, func(tx *sql.Tx) error {
 		// add user's friend
-		_, err := d.db.DB().ExecContext(ctx, `
+		_, err := tx.ExecContext(ctx, `
 				INSERT INTO user_friends (
 					user_id, friend_id
 				) VALUES (
@@ -37,7 +37,7 @@ func (d *dbRepository) AddFriend(ctx context.Context, userFriend *UserFriends) e
 		}
 
 		// add user as friend's friend
-		_, err = d.db.DB().ExecContext(ctx, `
+		_, err = tx.ExecContext(ctx, `
 				INSERT INTO user_friends (
 					user_id, friend_id
 				) VALUES (
@@ -49,7 +49,7 @@ func (d *dbRepository) AddFriend(ctx context.Context, userFriend *UserFriends) e
 		}
 
 		// add friendCount to user and friend
-		_, err = d.db.DB().ExecContext(ctx, `
+		_, err = tx.ExecContext(ctx, `
 				UPDATE users
 				SET friend_count = friend_count + 1
 				WHERE id = $1
@@ -67,7 +67,7 @@ func (d *dbRepository) AddFriend(ctx context.Context, userFriend *UserFriends) e
 
 func (d *dbRepository) RemoveFriend(ctx context.Context, userID string, friendID string) error {
 	err := d.db.StartTx(ctx, func(tx *sql.Tx) error {
-		_, err := d.db.DB().ExecContext(ctx, `
+		_, err := tx.ExecContext(ctx, `
 				DELETE FROM user_friends
 				WHERE (user_id = $1 AND friend_id = $2)
 				OR (user_id = $2 AND friend_id = $1)
@@ -77,7 +77,7 @@ func (d *dbRepository) RemoveFriend(ctx context.Context, userID string, friendID
 		}
 
 		// add friendCount to user and friend
-		_, err = d.db.DB().ExecContext(ctx, `
+		_, err = tx.ExecContext(ctx, `
 				UPDATE users
 				SET friend_count = friend_count - 1
 				WHERE id = $1
