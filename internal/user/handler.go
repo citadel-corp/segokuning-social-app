@@ -229,6 +229,16 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	err = req.Validate()
+	if err != nil {
+		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
+			Message: "Bad request",
+			Error:   err.Error(),
+		})
+		return
+	}
+
 	err = h.service.Update(r.Context(), req, userID)
 	if errors.Is(err, ErrValidationFailed) {
 		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
