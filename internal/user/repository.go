@@ -188,9 +188,9 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 	}
 
 	switch filter.SortBy {
-	case userSortBy(SortByFriendCount):
+	case SortByFriendCount:
 		orderStatement = fmt.Sprintf("%s ORDER BY users.friend_count %s", orderStatement, orderBy)
-	case userSortBy(SortByCreatedAt):
+	case SortByCreatedAt:
 		orderStatement = fmt.Sprintf("%s ORDER BY users.created_at %s", orderStatement, orderBy)
 	default:
 		orderStatement = fmt.Sprintf("%s ORDER BY users.created_at %s", orderStatement, orderBy)

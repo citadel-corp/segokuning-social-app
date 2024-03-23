@@ -100,6 +100,7 @@ func (h *Handler) ListPost(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
+
 	var req ListPostPayload
 
 	newSchema := schema.NewDecoder()
@@ -107,6 +108,23 @@ func (h *Handler) ListPost(w http.ResponseWriter, r *http.Request) {
 	if err := newSchema.Decode(&req, r.URL.Query()); err != nil {
 		slog.Error(err.Error())
 		response.JSON(w, http.StatusBadRequest, response.ResponseBody{})
+		return
+	}
+
+	var params = r.URL.Query()
+	if v, ok := request.CheckPositiveInt(params, "limit"); ok {
+		req.Limit = v
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if v, ok := request.CheckPositiveInt(params, "offset"); ok {
+		req.Offset = v
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
