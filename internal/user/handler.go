@@ -313,7 +313,7 @@ func (h *Handler) ListUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v, ok := request.CheckEnum(params, "sortBy", UserSortBys); ok {
-		req.OrderBy = v
+		req.SortBy = v
 	} else {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
