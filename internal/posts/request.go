@@ -14,7 +14,7 @@ func (p CreatePostPayload) Validate() error {
 	return validation.ValidateStruct(&p,
 		validation.Field(&p.UserID, validation.Required.Error(ErrorUnauthorized.Message)),
 		validation.Field(&p.PostInHTML, validation.Required, validation.Length(2, 500)),
-		validation.Field(&p.Tags, validation.Required),
+		validation.Field(&p.Tags, validation.Required, validation.Each(validation.NotNil, validation.Required)),
 	)
 }
 
