@@ -1,6 +1,7 @@
 package user
 
 import (
+	"regexp"
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -10,6 +11,11 @@ import (
 var phoneNumberValidationRule = validation.NewStringRule(func(s string) bool {
 	return strings.HasPrefix(s, "+")
 }, "phone number must start with international calling code")
+
+var urlValidationRule = validation.NewStringRule(func(s string) bool {
+	match, _ := regexp.MatchString("^((http|https)://)[-a-zA-Z0-9@:%._\\+~#?&//=]{2,256}\\.[a-z]{2,6}\\b([-a-zA-Z0-9@:%._\\+~#?&//=]*)$", s)
+	return match
+}, "url is not valid")
 
 type CreateUserPayload struct {
 	CredentialType  string `json:"credentialType"`
@@ -72,36 +78,25 @@ type UpdateUserPayload struct {
 
 func (p UpdateUserPayload) Validate() error {
 	return validation.ValidateStruct(&p,
-		validation.Field(&p.ImageURL, validation.Required, is.URL),
+		validation.Field(&p.ImageURL, validation.Required, urlValidationRule),
 		validation.Field(&p.Name, validation.Required, validation.Length(5, 50)),
 	)
 }
 
-type sortBy string
-type userSortBy sortBy
-
 var (
-	SortByFriendCount userSortBy = "friendCount"
-	SortByCreatedAt   userSortBy = "createdAt"
+	SortByFriendCount string = "friendCount"
+	SortByCreatedAt   string = "createdAt"
 )
 
-var userSortBys []interface{} = []interface{}{SortByFriendCount, SortByCreatedAt}
+var UserSortBys []string = []string{SortByFriendCount, SortByCreatedAt}
 
 type ListUserPayload struct {
-	OnlyFriend bool `schema:"onlyFriend" binding:"omitempty"`
-	UserID     string
-	Search     string     `schema:"search" binding:"omitempty"`
-	Limit      int        `schema:"limit" binding:"omitempty"`
-	Offset     int        `schema:"offset" binding:"omitempty"`
-	SortBy     userSortBy `schema:"sortBy" binding:"omitempty"`
-	OrderBy    string     `schema:"orderBy" binding:"omitempty"`
-}
-
-func (p ListUserPayload) Validate() error {
-	return validation.ValidateStruct(&p,
-		validation.Field(&p.SortBy, validation.In(userSortBys...)),
-		validation.Field(&p.OrderBy, validation.In("asc", "desc")),
-		// validation.Field(&p.Limit, validation.When(p.Offset != 0, validation.Required)),
-		// validation.Field(&p.Offset, validation.When(p.Limit != 0, validation.NotNil)),
-	)
+	OnlyFriend  bool
+	UserID      string
+	Search      string `schema:"search" binding:"omitempty"`
+	Limit       int
+	Offset      int
+	SortBy      string
+	OrderBy     string
+	WithoutUser bool
 }

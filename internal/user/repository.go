@@ -170,6 +170,13 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 		columnCtr++
 	}
 
+	if filter.WithoutUser {
+		whereStatement = insertWhereStatement(len(args) > 0, whereStatement)
+		whereStatement = fmt.Sprintf("%s users.id != $%d", whereStatement, columnCtr)
+		args = append(args, filter.UserID)
+		columnCtr++
+	}
+
 	var orderBy string
 	switch filter.OrderBy {
 	case "asc":
@@ -181,9 +188,9 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 	}
 
 	switch filter.SortBy {
-	case userSortBy(SortByFriendCount):
+	case SortByFriendCount:
 		orderStatement = fmt.Sprintf("%s ORDER BY users.friend_count %s", orderStatement, orderBy)
-	case userSortBy(SortByCreatedAt):
+	case SortByCreatedAt:
 		orderStatement = fmt.Sprintf("%s ORDER BY users.created_at %s", orderStatement, orderBy)
 	default:
 		orderStatement = fmt.Sprintf("%s ORDER BY users.created_at %s", orderStatement, orderBy)
@@ -201,7 +208,7 @@ func (d *dbRepository) List(ctx context.Context, filter ListUserPayload) ([]User
 	}
 
 	selectStatement = fmt.Sprintf(`
-		SELECT COUNT(*) OVER() AS total_count, users.id as productId, users.name as name, users.image_url as imageUrl,
+		SELECT COUNT(*) OVER() AS total_count, users.id as userId, users.name as name, users.image_url as imageUrl,
 			users.friend_count as friendCount, users.created_at as createdAt
 		FROM users
 	%s`, selectStatement)

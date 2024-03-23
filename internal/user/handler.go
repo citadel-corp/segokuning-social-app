@@ -229,6 +229,16 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	err = req.Validate()
+	if err != nil {
+		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
+			Message: "Bad request",
+			Error:   err.Error(),
+		})
+		return
+	}
+
 	err = h.service.Update(r.Context(), req, userID)
 	if errors.Is(err, ErrValidationFailed) {
 		response.JSON(w, http.StatusBadRequest, response.ResponseBody{
@@ -264,8 +274,49 @@ func (h *Handler) ListUser(w http.ResponseWriter, r *http.Request) {
 	newSchema := schema.NewDecoder()
 	newSchema.IgnoreUnknownKeys(true)
 	if err := newSchema.Decode(&req, r.URL.Query()); err != nil {
-		slog.Error(err.Error())
-		response.JSON(w, http.StatusBadRequest, response.ResponseBody{})
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var params = r.URL.Query()
+	if v, ok := request.CheckPositiveInt(params, "limit"); ok {
+		req.Limit = v
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if v, ok := request.CheckPositiveInt(params, "offset"); ok {
+		req.Offset = v
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if v, ok := request.CheckBoolean(params, "onlyFriend"); ok {
+		req.OnlyFriend = v
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if v, ok := request.CheckEnum(params, "orderBy", []string{"asc", "desc"}); ok {
+		req.OrderBy = v
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if v, ok := request.CheckEnum(params, "sortBy", UserSortBys); ok {
+		req.OrderBy = v
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

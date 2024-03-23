@@ -163,5 +163,6 @@ func (s *userService) Update(ctx context.Context, req UpdateUserPayload, userID 
 }
 
 func (s *userService) List(ctx context.Context, req ListUserPayload) ([]UserListResponse, *response.Pagination, error) {
+	req.WithoutUser = true
 	return s.repository.List(ctx, req)
 }
