@@ -94,13 +94,14 @@ var (
 var userSortBys []interface{} = []interface{}{SortByFriendCount, SortByCreatedAt}
 
 type ListUserPayload struct {
-	OnlyFriend bool `schema:"onlyFriend" binding:"omitempty"`
-	UserID     string
-	Search     string     `schema:"search" binding:"omitempty"`
-	Limit      int        `schema:"limit" binding:"omitempty"`
-	Offset     int        `schema:"offset" binding:"omitempty"`
-	SortBy     userSortBy `schema:"sortBy" binding:"omitempty"`
-	OrderBy    string     `schema:"orderBy" binding:"omitempty"`
+	OnlyFriend  bool `schema:"onlyFriend" binding:"omitempty"`
+	UserID      string
+	Search      string     `schema:"search" binding:"omitempty"`
+	Limit       int        `schema:"limit" binding:"omitempty"`
+	Offset      int        `schema:"offset" binding:"omitempty"`
+	SortBy      userSortBy `schema:"sortBy" binding:"omitempty"`
+	OrderBy     string     `schema:"orderBy" binding:"omitempty"`
+	WithoutUser bool
 }
 
 func (p ListUserPayload) Validate() error {
