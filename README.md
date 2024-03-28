@@ -109,7 +109,7 @@ The [Citadel Corp](https://github.com/citadel-corp) team:
 
 ## License
 
-This project is licensed under the [MIT License](https://github.com/citadel-corp/shopifyx-marketplace?tab=MIT-1-ov-file) - see the [LICENSE](https://github.com/citadel-corp/shopifyx-marketplace/blob/main/LICENSE) file for
+This project is licensed under the [MIT License](https://github.com/citadel-corp/segokuning-social-app?tab=MIT-1-ov-file) - see the [LICENSE](https://github.com/citadel-corp/segokuning-social-app/blob/main/LICENSE) file for
 details
 
 ## Acknowledgments
