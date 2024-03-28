@@ -21,3 +21,5 @@ __debug*
 
 # Go workspace file
 go.work
+
+.env
